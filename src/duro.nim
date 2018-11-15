@@ -96,7 +96,7 @@ proc toVar*(varname: string): VarExpression =
   result = VarExpression(name: varname)
 
 macro V*(varname: untyped): Expression =
-  ## Converts a identifier to a variable name.
+  ## Converts an identifier to a variable name.
   result = newCall("toVar", @[toStrLit(varname)])
 
 proc opInv*(opname: string, opargs: varargs[Expression]): Expression =
@@ -296,8 +296,8 @@ proc project*(exp: Expression, attrs: varargs[string]): Expression =
   result = OpExpression(name: "project", args: opargs)
 
 macro `{}`*(exp: Expression, attrs: varargs[untyped]): untyped =
-  # Creates a projection expression.
-  # Example: V(t){ attr1, attr2 }
+  ## Creates a projection expression.
+  ## Example: V(t){ attr1, attr2 }
   var args: seq[NimNode] = newSeq[NimNode](len(attrs) + 1);
   args[0] = exp
   for i in 0..<len(attrs):
@@ -313,8 +313,8 @@ proc renameExpr*(exp: Expression, renamings: varargs[string]): Expression =
   result = OpExpression(name: "rename", args: opargs)
 
 macro rename*(exp: Expression, renamings: varargs[untyped]): untyped =
-  # Creates a rename expression.
-  # Example: V(t).rename(attr1 as new_attr1, attr2 as new_attr2)
+  ## Creates a rename expression.
+  ## Example: V(t).rename(attr1 as new_attr1, attr2 as new_attr2)
   var opargs: seq[NimNode] = newSeq[NimNode](2 * len(renamings) + 1);
   opargs[0] = exp
   for i in 0..<len(renamings):
@@ -347,8 +347,8 @@ proc extendExpr*(exp: Expression, assigns: varargs[Expression]): Expression =
   result = OpExpression(name: "extend", args: opargs)
 
 macro extend*(exp: Expression, assigns: varargs[untyped]): untyped =
-  # Creates an extend expression.
-  # Example: V(t).extend(new_attr1 := <expression>, new_attr2 := <expression>)
+  ## Creates an extend expression.
+  ## Example: V(t).extend(new_attr1 := <expression>, new_attr2 := <expression>)
   var opargs: seq[NimNode] = newSeq[NimNode](2 * len(assigns) + 1);
   opargs[0] = exp
   for i in 0..<len(assigns):
@@ -373,8 +373,8 @@ proc summarizeExpr*(exp1: Expression, exp2: Expression, assigns: varargs[Express
   result = OpExpression(name: "summarize", args: opargs)
 
 macro summarize*(exp1: Expression, exp2: Expression, assigns: varargs[untyped]): untyped =
-  # Creates a summarize expression.
-  # Example: V(t).summarize(V(t){ attr1 }, new_attr := count(V(attr2)))
+  ## Creates a summarize expression.
+  ## Example: V(t).summarize(V(t){ attr1 }, new_attr := count(V(attr2)))
   var opargs: seq[NimNode] = newSeq[NimNode](2 * len(assigns) + 2);
   opargs[0] = exp1
   opargs[1] = exp2
@@ -388,8 +388,8 @@ macro summarize*(exp1: Expression, exp2: Expression, assigns: varargs[untyped]):
   result = newCall("summarizeExpr", opargs)
 
 proc where*(table: Expression, cond: Expression): Expression =
-  # Creates a summarize expression.
-  # Example: V(t).where(V(s) $= <value>)
+  ## Creates a where expression.
+  ## Example: V(t).where(V(s) $= <value>)
   result = OpExpression(name: "where", args: @[table, cond])
 
 proc union*(exp1: Expression, exp2: Expression): Expression =
@@ -411,19 +411,19 @@ proc `|><|`*(exp1: Expression, exp2: Expression): Expression =
   result = join(exp1, exp2)
 
 proc semijoin*(exp1: Expression, exp2: Expression): Expression =
-  # Creates a semijoin expression.
+  ## Creates a semijoin expression.
   result = OpExpression(name: "semijoin", args: @[exp1, exp2])
 
 proc `|><`*(exp1: Expression, exp2: Expression): Expression =
-  # Creates a semijoin expression.
+  ## Creates a semijoin expression.
   result = semijoin(exp1, exp2)
 
 proc `><|`*(exp1: Expression, exp2: Expression): Expression =
-  # Creates a semijoin expression.
+  ## Creates a semijoin expression.
   result = semijoin(exp2, exp1)
 
 proc matching*(exp1: Expression, exp2: Expression): Expression =
-  # Creates a semijoin expression.
+  ## Creates a semijoin expression.
   result = semijoin(exp1, exp2)
 
 proc semiminus*(exp1: Expression, exp2: Expression): Expression =
@@ -518,7 +518,7 @@ proc extractTuple[T](t: var T, tb: pointer, tx: Transaction) =
   discard RDB_destroy_obj(addr(obj), addr(tx.database.context.execContext))
 
 proc toBool*(exp: Expression, tx: Transaction): bool =
-  # Evaluates an expression to int.
+  ## Evaluates an expression to int.
   var dexp = toDuroExpression(exp, addr(tx.database.context.execContext))
   var dobj: RDB_object
   RDB_init_obj(addr(dobj))
@@ -535,7 +535,7 @@ proc toBool*(exp: Expression, tx: Transaction): bool =
     RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
 proc toInt*(exp: Expression, tx: Transaction): int =
-  # Evaluates an expression to int.
+  ## Evaluates an expression to int.
   var dexp = toDuroExpression(exp, addr(tx.database.context.execContext))
   var dobj: RDB_object
   RDB_init_obj(addr(dobj))
@@ -552,7 +552,7 @@ proc toInt*(exp: Expression, tx: Transaction): int =
     RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
 proc toFloat*(exp: Expression, tx: Transaction): float =
-  # Evaluates an expression to float.
+  ## Evaluates an expression to float.
   var dexp = toDuroExpression(exp, addr(tx.database.context.execContext))
   var dobj: RDB_object
   RDB_init_obj(addr(dobj))
@@ -569,7 +569,7 @@ proc toFloat*(exp: Expression, tx: Transaction): float =
     RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
 proc toString*(exp: Expression, tx: Transaction): string =
-  # Evaluates an expression to string.
+  ## Evaluates an expression to string.
   var dexp = toDuroExpression(exp, addr(tx.database.context.execContext))
   var dobj: RDB_object
   RDB_init_obj(addr(dobj))
@@ -589,8 +589,8 @@ proc toString*(exp: Expression, tx: Transaction): string =
     RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
 proc toTuple*[T](t: var T, exp: Expression, tx: Transaction) =
-  # Extracts a single tuple from a table.
-  # Raises an error if the table is empty or if it contains more than one tuple.
+  ## Extracts a single tuple from a table.
+  ## Raises an error if the table is empty or if it contains more than one tuple.
   if exp of VarExpression:
     let tb = RDB_get_table(cstring(VarExpression(exp).name),
                            addr(tx.database.context.execContext),
@@ -642,7 +642,7 @@ proc toSeq[T](s: var seq[T], tb: pointer, tx: Transaction, order: varargs[SeqIte
     RDB_destroy_obj(addr(arr), addr(tx.database.context.execContext))
 
 proc load*[T](s: var seq[T], exp: Expression, tx: Transaction, order: varargs[SeqItem]) =
-  # Copies a relational expression to a sequence.
+  ## Copies a relational expression to a sequence.
   if exp of VarExpression:
     let tb = RDB_get_table(cstring(VarExpression(exp).name),
                            addr(tx.database.context.execContext),
@@ -666,7 +666,7 @@ proc load*[T](s: var seq[T], exp: Expression, tx: Transaction, order: varargs[Se
       RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
 proc insert*[T](v: Expression, t: T, tx: Transaction) =
-  # Inserts a Nim tuple into the table given by 'v'.
+  ## Inserts a Nim tuple into the table given by 'v'.
   let tb = RDB_get_table(cstring(VarExpression(v).name),
                          addr(tx.database.context.execContext),
                          addr(tx.tx))
@@ -713,8 +713,8 @@ proc insert*[T](v: Expression, t: T, tx: Transaction) =
     RDB_destroy_obj(addr(obj), addr(tx.database.context.execContext))
 
 proc delete*(v: Expression, cond: Expression, tx: Transaction): int {.discardable.} =
-  # Deletes the tuples for which 'cond' evaluates to true from the table
-  # given by 'v'.
+  ## Deletes the tuples for which 'cond' evaluates to true from the table
+  ## given by 'v'.
   let tb = RDB_get_table(cstring(VarExpression(v).name),
                          addr(tx.database.context.execContext),
                          addr(tx.tx))
@@ -760,8 +760,8 @@ proc updateExpr*(v: Expression, cond: Expression, tx: Transaction,
 
 macro update*(v: Expression, cond: Expression, tx: Transaction,
               assigns: varargs[untyped]): int {.discardable.} =
-  # Updates the table given by 'v'.
-  # Example: 
+  ## Updates the table given by 'v'.
+  ## Example: V(t1).update(V(n) $= 1, tx, s := toExpr("NewValue"))
   var opargs: seq[NimNode] = newSeq[NimNode](2 * len(assigns) + 3);
   opargs[0] = v
   opargs[1] = cond
