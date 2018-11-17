@@ -641,7 +641,7 @@ type
     attr*: string
     dir*: Direction
 
-proc toSeq[T](s: var seq[T], tb: pointer, tx: Transaction, order: varargs[SeqItem]) =
+proc toSeq[T](s: var seq[T], tb: ptr RDB_object, tx: Transaction, order: varargs[SeqItem]) =
   var orderseq = newSeq[RDB_seq_item](order.len);
   for i in 0..<order.len:
     orderseq[i].attrname = cstring(order[i].attr)
