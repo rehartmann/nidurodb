@@ -30,7 +30,7 @@ DuroDBMS is based on the principles laid down in the book *Databases, Types, and
 
 ## Getting Started
 
-To use Nidurodb, you need to download an install DuroDBMS ([Github](https://github.com/rehartmann/durodbms)|[Sourceforge](https://sourceforge.net/projects/duro/files/duro/1.4/)).
+To use Nidurodb, you need to download and install DuroDBMS ([Github](https://github.com/rehartmann/durodbms)|[Sourceforge](https://sourceforge.net/projects/duro/files/duro/1.4/)).
 
 Add the lib directory to the library path (LD_LIBRARY_PATH on Linux).
 
@@ -53,3 +53,5 @@ nim -p:../src c -r ra.nim
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+
+DuroDBMS is licensed under the LGPL License.
