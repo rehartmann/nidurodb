@@ -133,14 +133,14 @@ proc RDB_del_expr*(exp: RDB_expression, pExecContext: RDB_exec_context): cint
 proc RDB_expr_obj*(exp: RDB_expression): ptr RDB_object
   {.cdecl, dynlib: libduro, importc, discardable.}
 
-proc RDB_table_to_array*(arrp: pointer, tbp: pointer, seqitc: cint, seqitv: ptr RDB_seq_item, flags: cint,
+proc RDB_table_to_array*(arrp: ptr RDB_object, tbp: pointer, seqitc: cint, seqitv: ptr RDB_seq_item, flags: cint,
   pExecContext: RDB_exec_context, tx: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_array_length*(arrp: pointer, pExecContext: RDB_exec_context): cint
+proc RDB_array_length*(arrp: ptr RDB_object, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_array_get*(arrp: pointer, idx: cint, pExecContext: RDB_exec_context): pointer
+proc RDB_array_get*(arrp: ptr RDB_object, idx: cint, pExecContext: RDB_exec_context): ptr RDB_object
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_get_err*(pExecContext: RDB_exec_context): ptr RDB_object
