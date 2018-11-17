@@ -2,7 +2,7 @@
 
 Nidurodb is a [Nim](https://nim-lang.org/) interface for DuroDBMS, a relational database library.
 
-Nidurodb exploits Nim's metadata facilities to provide database access using a relational algebra instead of SQL.
+Nidurodb exploits Nim's metaprogramming facilities to provide database access using a relational algebra instead of SQL.
 
 For example, the following SQL statement:
 
