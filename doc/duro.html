@@ -1388,6 +1388,8 @@ function main() {
     title="toExpr*(f: float): Expression"><wbr />to<wbr />Expr<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#toExpr,string"
     title="toExpr*(s: string): Expression"><wbr />to<wbr />Expr<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#toExpr,seq[byte]"
+    title="toExpr*(bytes: seq[byte]): Expression"><wbr />to<wbr />Expr<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#extendExpr,Expression,varargs[Expression]"
     title="extendExpr*(exp: Expression; assigns: varargs[Expression]): Expression"><wbr />extend<wbr />Expr<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#summarizeExpr,Expression,Expression,varargs[Expression]"
@@ -1858,22 +1860,27 @@ Creates a cast_as_string expression
 </dd>
 <dt id="toExpr"><a name="toExpr,bool"></a><pre><span class="Keyword">proc</span> <span class="Identifier">toExpr</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">b</span><span class="Other">:</span> <span class="Identifier">bool</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Expression</span></pre></dt>
 <dd>
-
+Converts a boolean value to an expression.
 
 </dd>
 <dt id="toExpr"><a name="toExpr,int"></a><pre><span class="Keyword">proc</span> <span class="Identifier">toExpr</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">i</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Expression</span></pre></dt>
 <dd>
-
+Converts an integer value to an expression.
 
 </dd>
 <dt id="toExpr"><a name="toExpr,float"></a><pre><span class="Keyword">proc</span> <span class="Identifier">toExpr</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">f</span><span class="Other">:</span> <span class="Identifier">float</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Expression</span></pre></dt>
 <dd>
-
+Converts a float value to an expression.
 
 </dd>
 <dt id="toExpr"><a name="toExpr,string"></a><pre><span class="Keyword">proc</span> <span class="Identifier">toExpr</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Expression</span></pre></dt>
 <dd>
+Converts a string value to an expression.
 
+</dd>
+<dt id="toExpr"><a name="toExpr,seq[byte]"></a><pre><span class="Keyword">proc</span> <span class="Identifier">toExpr</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">bytes</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">byte</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Expression</span></pre></dt>
+<dd>
+Converts a sequence of bytes to an expression.
 
 </dd>
 <dt id="extendExpr"><a name="extendExpr,Expression,varargs[Expression]"></a><pre><span class="Keyword">proc</span> <span class="Identifier">extendExpr</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">assigns</span><span class="Other">:</span> <span class="Identifier">varargs</span><span class="Other">[</span><span class="Identifier">Expression</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Expression</span></pre></dt>
@@ -2043,7 +2050,7 @@ Updates the table given by 'v'. Example: V(t1).update(V(n) $= 1, tx, s := toExpr
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2018-11-15 21:20:38 UTC</small>
+        <small>Made with Nim. Generated: 2018-11-17 12:16:39 UTC</small>
       </div>
     </div>
   </div>

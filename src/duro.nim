@@ -20,6 +20,9 @@ type
    FloatExpression = ref object of Expression
       value: float
 
+   ByteSeqExpression = ref object of Expression
+      value: seq[byte]
+
    OpExpression = ref object of Expression
      name: string
      args: seq[Expression]
@@ -327,16 +330,24 @@ macro rename*(exp: Expression, renamings: varargs[untyped]): untyped =
   result = newCall("renameExpr", opargs)
 
 proc toExpr*(b: bool): Expression =
+  ## Converts a boolean value to an expression.
   return BoolExpression(value: b)
 
 proc toExpr*(i: int): Expression =
+  ## Converts an integer value to an expression.
   return IntExpression(value: i)
 
 proc toExpr*(f: float): Expression =
+  ## Converts a float value to an expression.
   return FloatExpression(value: f)
 
 proc toExpr*(s: string): Expression =
+  ## Converts a string value to an expression.
   return StringExpression(value: s)
+
+proc toExpr*(bytes: seq[byte]): Expression =
+  ## Converts a sequence of bytes to an expression.
+  return ByteSeqExpression(value: bytes)
 
 proc extendExpr*(exp: Expression, assigns: varargs[Expression]): Expression =
   var
@@ -505,6 +516,18 @@ method toDuroExpression(exp: OpExpression, ecp: pointer): RDB_expression =
   for i in countup(0, len(exp.args)-1):
     RDB_add_arg(dexp, toDuroExpression(exp.args[i], ecp))
   return dexp
+
+method toDuroExpression(exp: ByteSeqExpression, ecp: pointer): RDB_expression =
+  var
+    obj: RDB_object
+  RDB_init_obj(addr(obj))
+  result = RDB_obj_to_expr(addr(obj), ecp)
+  RDB_destroy_obj(addr(obj), ecp)
+  if result == nil:
+    raiseDuroError(ecp)    
+  if RDB_binary_set(RDB_expr_obj(result), csize(0), addr(exp.value[0]),
+                    csize(exp.value.len), ecp) != RDB_OK:
+    raiseDuroError(ecp)
 
 proc extractTuple[T](t: var T, tb: pointer, tx: Transaction) =
   var obj: RDB_object

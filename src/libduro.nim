@@ -94,25 +94,28 @@ proc RDB_binary_set*(objp: pointer, pos: csize, scrp: pointer, len: csize, ecp: 
 proc RDB_type_name*(objp: pointer): cstring
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_var_ref*(attrname: cstring, ecp: pointer):RDB_expression
+proc RDB_var_ref*(attrname: cstring, ecp: pointer): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_bool_to_expr*(b: cchar, ecp: pointer):RDB_expression
+proc RDB_bool_to_expr*(b: cchar, ecp: pointer): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_string_to_expr*(str: cstring, ecp: pointer):RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_int_to_expr*(val: cint, ecp: pointer):RDB_expression
+proc RDB_int_to_expr*(val: cint, ecp: pointer): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_float_to_expr*(val: cdouble, ecp: pointer):RDB_expression
+proc RDB_float_to_expr*(val: cdouble, ecp: pointer): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_ro_op*(opname: cstring, ecp: pointer):RDB_expression
+proc RDB_obj_to_expr*(obj: ptr RDB_object, ecp: pointer): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_add_arg*(dexp:RDB_expression, arg:RDB_expression)
+proc RDB_ro_op*(opname: cstring, ecp: pointer): RDB_expression
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_add_arg*(dexp: RDB_expression, arg: RDB_expression)
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_evaluate*(exp: RDB_expression, getfnp: pointer, getdata: pointer, env: pointer,
@@ -120,6 +123,9 @@ proc RDB_evaluate*(exp: RDB_expression, getfnp: pointer, getdata: pointer, env: 
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_del_expr*(exp: RDB_expression, ecp: pointer): cint
+  {.cdecl, dynlib: libduro, importc, discardable.}
+
+proc RDB_expr_obj*(exp: RDB_expression): ptr RDB_object
   {.cdecl, dynlib: libduro, importc, discardable.}
 
 proc RDB_table_to_array*(arrp: pointer, tbp: pointer, seqitc: cint, seqitv: ptr RDB_seq_item, flags: cint,

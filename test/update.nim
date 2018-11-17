@@ -40,14 +40,15 @@ suite "table insert, update, delete":
     check(outtup.b == true)
     check(outtup.bn == @[byte(255)])
 
-    V(t1).update(V(n) $= 1, tx, s := toExpr("ohh"), f := toExpr(1.0), b := toExpr(false))
+    V(t1).update(V(n) $= 1, tx, s := toExpr("ohh"), f := toExpr(1.0), b := toExpr(false),
+                 bn := toExpr(@[byte(1), byte(20)]))
 
     toTuple(outtup, V(t1), tx)
     check(outtup.n == 1)
     check(outtup.s == "ohh")
     check(outtup.f == 1.0)
     check(outtup.b == false)
-    # check(outtup.bn == @[byte(255)])
+    check(outtup.bn == @[byte(1), byte(20)])
 
     tx.commit
     dc.closeContext
