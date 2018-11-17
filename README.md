@@ -15,7 +15,7 @@ where a > 1000;
 is equivalent to the following code in Nidurodb:
 
 ```
-V(t).where(V(a) > 1000){a, b}.rename(a as x, b as y)
+V(t).where(V(a) $> 1000){a, b}.rename(a as x, b as y)
 ```
 
 Loading the result into a sequence:
@@ -34,7 +34,8 @@ To use Nidurodb, you need to download an install DuroDBMS ([Github](https://gith
 
 Add the lib directory to the library path (LD_LIBRARY_PATH on Linux).
 
-To create databases and tables and to run the tests you will also the the interpreter *Duro D/T*. To make the interpreter available on the command line, add the bin directory to the search path.
+To create databases and tables and to run the tests you will also the the interpreter [Duro D/T](http://duro.sourceforge.net/docs/durodt/tut.html).
+To make the interpreter available on the command line, add the bin directory to the search path.
 
 ## Running the tests
 
