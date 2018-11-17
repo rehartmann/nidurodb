@@ -58,37 +58,37 @@ proc RDB_get_table*(name: cstring, ecp: pointer, tx: pointer): pointer
 proc RDB_extract_tuple*(tbp: pointer, ecp: pointer, tx: pointer, tplp: pointer): cint
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_init_obj*(objp: pointer)
+proc RDB_init_obj*(pObj: ptr RDB_object)
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_destroy_obj*(objp: pointer, ecp: pointer): cint
+proc RDB_destroy_obj*(pObj: ptr RDB_object, ecp: pointer): cint
    {.cdecl, dynlib: libduro, importc, discardable.}
 
-proc RDB_tuple_get*(objp: pointer, name: cstring): pointer
+proc RDB_tuple_get*(pObj: ptr RDB_object, name: cstring): ptr RDB_object
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_obj_bool*(objp: pointer): cchar
+proc RDB_obj_bool*(pObj: ptr RDB_object): cchar
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_obj_string*(objp: pointer): cstring
+proc RDB_obj_string*(objp: ptr RDB_object): cstring
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_obj_int*(objp: pointer): cint
+proc RDB_obj_int*(objp: ptr RDB_object): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_obj_float*(objp: pointer): cdouble
+proc RDB_obj_float*(objp: ptr RDB_object): cdouble
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_obj_type*(objp: pointer): pointer
+proc RDB_obj_type*(objp: ptr RDB_object): pointer
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_binary_length*(objp: pointer): csize
+proc RDB_binary_length*(objp: ptr RDB_object): csize
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_binary_get*(objp: pointer, pos: csize, len: csize, ecp: pointer, pp: ptr ptr byte, alenp: ptr csize): cint
+proc RDB_binary_get*(objp: ptr RDB_object, pos: csize, len: csize, ecp: pointer, pp: ptr ptr byte, alenp: ptr csize): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_binary_set*(objp: pointer, pos: csize, scrp: pointer, len: csize, ecp: pointer): cint
+proc RDB_binary_set*(objp: ptr RDB_object, pos: csize, scrp: pointer, len: csize, ecp: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_type_name*(objp: pointer): cstring
@@ -138,25 +138,25 @@ proc RDB_array_length*(arrp: pointer, ecp: pointer): cint
 proc RDB_array_get*(arrp: pointer, idx: cint, ecp: pointer): pointer
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_get_err*(ecp: pointer): pointer
+proc RDB_get_err*(ecp: pointer): ptr RDB_object
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set*(obj: pointer, attrname: cstring, value: pointer, ecp: pointer): cint
+proc RDB_tuple_set*(pObj: ptr RDB_object, attrname: cstring, value: pointer, ecp: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set_string*(obj: pointer, attrname: cstring, value: cstring, ecp: pointer): cint
+proc RDB_tuple_set_string*(pObj: ptr RDB_object, attrname: cstring, value: cstring, ecp: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set_bool*(obj: pointer, attrname: cstring, value: cchar, ecp: pointer): cint
+proc RDB_tuple_set_bool*(pObj: ptr RDB_object, attrname: cstring, value: cchar, ecp: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set_int*(obj: pointer, attrname: cstring, value: cint, ecp: pointer): cint
+proc RDB_tuple_set_int*(pObj: ptr RDB_object, attrname: cstring, value: cint, ecp: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set_float*(obj: pointer, attrname: cstring, value: cdouble, ecp: pointer): cint
+proc RDB_tuple_set_float*(pObj: ptr RDB_object, attrname: cstring, value: cdouble, ecp: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_insert*(tb: pointer, obj: pointer, ecp: pointer, tx: pointer): cint
+proc RDB_insert*(tb: pointer, pObj: ptr RDB_object, ecp: pointer, tx: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_delete*(tb: pointer, cond: RDB_expression, ecp: pointer, tx: pointer): cint

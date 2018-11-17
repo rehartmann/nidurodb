@@ -443,7 +443,7 @@ proc semiminus*(exp1: Expression, exp2: Expression): Expression =
 proc notMatching*(exp1: Expression, exp2: Expression): Expression =
   result = OpExpression(name: "semiminus", args: @[exp1, exp2])
 
-proc tupleFromDuro[T](t: var T, durotup: pointer, ecp: pointer) =
+proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, ecp: pointer) =
   for name, value in fieldPairs(t):
     let duroval = RDB_tuple_get(durotup, cstring(name))
     if duroval == nil:
