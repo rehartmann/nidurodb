@@ -28,40 +28,44 @@ type
     name*: cstring
     exp*: RDB_expression
 
-proc RDB_init_exec_context*(pExecContext: pointer)
+  RDB_exec_contextObj* = array[60, char]
+  
+  RDB_exec_context* = ptr RDB_exec_contextObj
+    
+proc RDB_init_exec_context*(pExecContext: RDB_exec_context)
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_destroy_exec_context*(pExecContext: pointer)
+proc RDB_destroy_exec_context*(pExecContext: RDB_exec_context)
    {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_open_env*(path: cstring, flags: cint, penv: pointer): pointer
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_close_env*(env: pointer, execContext: pointer): cint
+proc RDB_close_env*(env: pointer, pExecContext: RDB_exec_context): cint
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_get_db_from_env*(name: cstring, env: pointer, ecp: pointer, tx: pointer): pointer
+proc RDB_get_db_from_env*(name: cstring, env: pointer, pExecContext: RDB_exec_context, tx: pointer): pointer
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_begin_tx*(ecp: pointer, tx: pointer, db: pointer, parent: pointer): cint
+proc RDB_begin_tx*(pExecContext: RDB_exec_context, tx: pointer, db: pointer, parent: pointer): cint
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_commit*(ecp: pointer, tx:pointer): cint
+proc RDB_commit*(pExecContext: RDB_exec_context, tx:pointer): cint
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_rollback*(ecp: pointer, tx:pointer): cint
+proc RDB_rollback*(pExecContext: RDB_exec_context, tx:pointer): cint
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_get_table*(name: cstring, ecp: pointer, tx: pointer): pointer
+proc RDB_get_table*(name: cstring, pExecContext: RDB_exec_context, tx: pointer): pointer
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_extract_tuple*(tbp: pointer, ecp: pointer, tx: pointer, tplp: pointer): cint
+proc RDB_extract_tuple*(tbp: pointer, pExecContext: RDB_exec_context, tx: pointer, tplp: pointer): cint
    {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_init_obj*(pObj: ptr RDB_object)
    {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_destroy_obj*(pObj: ptr RDB_object, ecp: pointer): cint
+proc RDB_destroy_obj*(pObj: ptr RDB_object, pExecContext: RDB_exec_context): cint
    {.cdecl, dynlib: libduro, importc, discardable.}
 
 proc RDB_tuple_get*(pObj: ptr RDB_object, name: cstring): ptr RDB_object
@@ -85,82 +89,83 @@ proc RDB_obj_type*(objp: ptr RDB_object): pointer
 proc RDB_binary_length*(objp: ptr RDB_object): csize
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_binary_get*(objp: ptr RDB_object, pos: csize, len: csize, ecp: pointer, pp: ptr ptr byte, alenp: ptr csize): cint
+proc RDB_binary_get*(objp: ptr RDB_object, pos: csize, len: csize, pExecContext: RDB_exec_context,
+                     pp: ptr ptr byte, alenp: ptr csize): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_binary_set*(objp: ptr RDB_object, pos: csize, scrp: pointer, len: csize, ecp: pointer): cint
+proc RDB_binary_set*(objp: ptr RDB_object, pos: csize, scrp: pointer, len: csize, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_type_name*(objp: pointer): cstring
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_var_ref*(attrname: cstring, ecp: pointer): RDB_expression
+proc RDB_var_ref*(attrname: cstring, pExecContext: RDB_exec_context): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_bool_to_expr*(b: cchar, ecp: pointer): RDB_expression
+proc RDB_bool_to_expr*(b: cchar, pExecContext: RDB_exec_context): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_string_to_expr*(str: cstring, ecp: pointer):RDB_expression
+proc RDB_string_to_expr*(str: cstring, pExecContext: RDB_exec_context):RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_int_to_expr*(val: cint, ecp: pointer): RDB_expression
+proc RDB_int_to_expr*(val: cint, pExecContext: RDB_exec_context): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_float_to_expr*(val: cdouble, ecp: pointer): RDB_expression
+proc RDB_float_to_expr*(val: cdouble, pExecContext: RDB_exec_context): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_obj_to_expr*(obj: ptr RDB_object, ecp: pointer): RDB_expression
+proc RDB_obj_to_expr*(obj: ptr RDB_object, pExecContext: RDB_exec_context): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_ro_op*(opname: cstring, ecp: pointer): RDB_expression
+proc RDB_ro_op*(opname: cstring, pExecContext: RDB_exec_context): RDB_expression
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_add_arg*(dexp: RDB_expression, arg: RDB_expression)
   {.cdecl, dynlib: libduro, importc.}
 
 proc RDB_evaluate*(exp: RDB_expression, getfnp: pointer, getdata: pointer, env: pointer,
-  ecp: pointer, tx: pointer, val: pointer): cint
+  pExecContext: RDB_exec_context, tx: pointer, val: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_del_expr*(exp: RDB_expression, ecp: pointer): cint
+proc RDB_del_expr*(exp: RDB_expression, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc, discardable.}
 
 proc RDB_expr_obj*(exp: RDB_expression): ptr RDB_object
   {.cdecl, dynlib: libduro, importc, discardable.}
 
 proc RDB_table_to_array*(arrp: pointer, tbp: pointer, seqitc: cint, seqitv: ptr RDB_seq_item, flags: cint,
-  ecp: pointer, tx: pointer): cint
+  pExecContext: RDB_exec_context, tx: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_array_length*(arrp: pointer, ecp: pointer): cint
+proc RDB_array_length*(arrp: pointer, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_array_get*(arrp: pointer, idx: cint, ecp: pointer): pointer
+proc RDB_array_get*(arrp: pointer, idx: cint, pExecContext: RDB_exec_context): pointer
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_get_err*(ecp: pointer): ptr RDB_object
+proc RDB_get_err*(pExecContext: RDB_exec_context): ptr RDB_object
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set*(pObj: ptr RDB_object, attrname: cstring, value: pointer, ecp: pointer): cint
+proc RDB_tuple_set*(pObj: ptr RDB_object, attrname: cstring, value: pointer, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set_string*(pObj: ptr RDB_object, attrname: cstring, value: cstring, ecp: pointer): cint
+proc RDB_tuple_set_string*(pObj: ptr RDB_object, attrname: cstring, value: cstring, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set_bool*(pObj: ptr RDB_object, attrname: cstring, value: cchar, ecp: pointer): cint
+proc RDB_tuple_set_bool*(pObj: ptr RDB_object, attrname: cstring, value: cchar, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set_int*(pObj: ptr RDB_object, attrname: cstring, value: cint, ecp: pointer): cint
+proc RDB_tuple_set_int*(pObj: ptr RDB_object, attrname: cstring, value: cint, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_tuple_set_float*(pObj: ptr RDB_object, attrname: cstring, value: cdouble, ecp: pointer): cint
+proc RDB_tuple_set_float*(pObj: ptr RDB_object, attrname: cstring, value: cdouble, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_insert*(tb: pointer, pObj: ptr RDB_object, ecp: pointer, tx: pointer): cint
+proc RDB_insert*(tb: pointer, pObj: ptr RDB_object, pExecContext: RDB_exec_context, tx: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_delete*(tb: pointer, cond: RDB_expression, ecp: pointer, tx: pointer): cint
+proc RDB_delete*(tb: pointer, cond: RDB_expression, pExecContext: RDB_exec_context, tx: pointer): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_update*(tb: pointer, cond: RDB_expression, updc: cint, updv: ptr RDB_attr_update, ecp: pointer, tx: pointer): cint
+proc RDB_update*(tb: pointer, cond: RDB_expression, updc: cint, updv: ptr RDB_attr_update, pExecContext: RDB_exec_context, tx: pointer): cint
   {.cdecl, dynlib: libduro, importc.}

@@ -31,7 +31,7 @@ type
 
    DContext* = ref object
       pEnv: pointer
-      execContext: array[60, char]
+      execContext: RDB_exec_contextObj
 
    Database* = ref object
       pDb: pointer
@@ -41,8 +41,8 @@ type
       database: Database
       tx: array[7, pointer]
 
-proc raiseDuroError(ecp: pointer) {.noReturn.} =
-  let err = RDB_get_err(ecp)
+proc raiseDuroError(pExecContext: RDB_exec_context) {.noReturn.} =
+  let err = RDB_get_err(pExecContext)
   let errtyp = RDB_obj_type(err)
   if errtyp != nil:
     var errmsg = newString(len(RDB_type_name(errtyp)))
@@ -443,7 +443,7 @@ proc semiminus*(exp1: Expression, exp2: Expression): Expression =
 proc notMatching*(exp1: Expression, exp2: Expression): Expression =
   result = OpExpression(name: "semiminus", args: @[exp1, exp2])
 
-proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, ecp: pointer) =
+proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, pExecContext: RDB_exec_context) =
   for name, value in fieldPairs(t):
     let duroval = RDB_tuple_get(durotup, cstring(name))
     if duroval == nil:
@@ -473,61 +473,61 @@ proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, ecp: pointer) =
         raise newException(ValueError, "not a binary")
       var bp: ptr byte
       let len = RDB_binary_length(duroval)
-      if RDB_binary_get(duroval, 0, len, ecp, addr(bp), nil) != RDB_OK:
-        raiseDuroError(ecp)
+      if RDB_binary_get(duroval, 0, len, pExecContext, addr(bp), nil) != RDB_OK:
+        raiseDuroError(pExecContext)
       newSeq(value, len)
       copyMem(addr(value[0]), bp, len)
     elif value is tuple:
-      tupleFromDuro(value, duroval, ecp)
+      tupleFromDuro(value, duroval, pExecContext)
     else:
       raise newException(ValueError, "value not supported")
 
-method toDuroExpression(exp: Expression, ecp: pointer): RDB_expression {.base.} = nil
+method toDuroExpression(exp: Expression, pExecContext: RDB_exec_context): RDB_expression {.base.} = nil
 
-method toDuroExpression(exp: VarExpression, ecp: pointer): RDB_expression =
-  result = RDB_var_ref(cstring(exp.name), ecp)
+method toDuroExpression(exp: VarExpression, pExecContext: RDB_exec_context): RDB_expression =
+  result = RDB_var_ref(cstring(exp.name), pExecContext)
   if result == nil:
-    raiseDuroError(ecp)
+    raiseDuroError(pExecContext)
 
-method toDuroExpression(exp: BoolExpression, ecp: pointer): RDB_expression =
-  result = RDB_bool_to_expr(cchar(exp.value), ecp)
+method toDuroExpression(exp: BoolExpression, pExecContext: RDB_exec_context): RDB_expression =
+  result = RDB_bool_to_expr(cchar(exp.value), pExecContext)
   if result == nil:
-    raiseDuroError(ecp)
+    raiseDuroError(pExecContext)
 
-method toDuroExpression(exp: StringExpression, ecp: pointer): RDB_expression =
-  result = RDB_string_to_expr(cstring(exp.value), ecp)
+method toDuroExpression(exp: StringExpression, pExecContext: RDB_exec_context): RDB_expression =
+  result = RDB_string_to_expr(cstring(exp.value), pExecContext)
   if result == nil:
-    raiseDuroError(ecp)
+    raiseDuroError(pExecContext)
 
-method toDuroExpression(exp: IntExpression, ecp: pointer): RDB_expression =
-  result = RDB_int_to_expr(cint(exp.value), ecp)
+method toDuroExpression(exp: IntExpression, pExecContext: RDB_exec_context): RDB_expression =
+  result = RDB_int_to_expr(cint(exp.value), pExecContext)
   if result == nil:
-    raiseDuroError(ecp)
+    raiseDuroError(pExecContext)
 
-method toDuroExpression(exp: FloatExpression, ecp: pointer): RDB_expression =
-  result = RDB_float_to_expr(cdouble(exp.value), ecp)
+method toDuroExpression(exp: FloatExpression, pExecContext: RDB_exec_context): RDB_expression =
+  result = RDB_float_to_expr(cdouble(exp.value), pExecContext)
   if result == nil:
-    raiseDuroError(ecp)
+    raiseDuroError(pExecContext)
 
-method toDuroExpression(exp: OpExpression, ecp: pointer): RDB_expression =
-  let dexp = RDB_ro_op(cstring(exp.name), ecp)
+method toDuroExpression(exp: OpExpression, pExecContext: RDB_exec_context): RDB_expression =
+  let dexp = RDB_ro_op(cstring(exp.name), pExecContext)
   if dexp == nil:
-    raiseDuroError(ecp)
+    raiseDuroError(pExecContext)
   for i in countup(0, len(exp.args)-1):
-    RDB_add_arg(dexp, toDuroExpression(exp.args[i], ecp))
+    RDB_add_arg(dexp, toDuroExpression(exp.args[i], pExecContext))
   return dexp
 
-method toDuroExpression(exp: ByteSeqExpression, ecp: pointer): RDB_expression =
+method toDuroExpression(exp: ByteSeqExpression, pExecContext: RDB_exec_context): RDB_expression =
   var
     obj: RDB_object
   RDB_init_obj(addr(obj))
-  result = RDB_obj_to_expr(addr(obj), ecp)
-  RDB_destroy_obj(addr(obj), ecp)
+  result = RDB_obj_to_expr(addr(obj), pExecContext)
+  RDB_destroy_obj(addr(obj), pExecContext)
   if result == nil:
-    raiseDuroError(ecp)    
+    raiseDuroError(pExecContext)    
   if RDB_binary_set(RDB_expr_obj(result), csize(0), addr(exp.value[0]),
-                    csize(exp.value.len), ecp) != RDB_OK:
-    raiseDuroError(ecp)
+                    csize(exp.value.len), pExecContext) != RDB_OK:
+    raiseDuroError(pExecContext)
 
 proc extractTuple[T](t: var T, tb: pointer, tx: Transaction) =
   var obj: RDB_object
