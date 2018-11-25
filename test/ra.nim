@@ -32,9 +32,9 @@ suite "relational algrebra":
 
     var
       intup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]] = (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)])
-    V(t1).insert(intup, tx)
+    duro.insert(t1, intup, tx)
     intup = (n: 2, s: "Ohh", f: 3.0, b: false, bn: @[byte(0), byte(1)])
-    V(t1).insert(intup, tx)
+    duro.insert(t1, intup, tx)
 
     var
       s: seq[tuple[n: int, s: string]]
@@ -61,9 +61,9 @@ suite "relational algrebra":
     let
       tx = dc.getDatabase("D").begin
 
-    V(t1).insert((n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
-    V(t1).insert((n: 2, s: "ohh", f: 2.0, b: false, bn: @[byte(1), byte(2)]), tx)
-    V(t2).insert((n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
+    duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
+    duro.insert(t1, (n: 2, s: "ohh", f: 2.0, b: false, bn: @[byte(1), byte(2)]), tx)
+    duro.insert(t2, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
 
     var
       s: seq[tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]]
@@ -110,9 +110,9 @@ suite "relational algrebra":
     let
       tx = dc.getDatabase("D").begin
 
-    V(t1).insert((n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
-    V(t3).insert((m: 1, k: 1, s: "Foo!"), tx)
-    V(t3).insert((m: 2, k: 1, s: "Bar?"), tx)
+    duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
+    duro.insert(t3, (m: 1, k: 1, s: "Foo!"), tx)
+    duro.insert(t3, (m: 2, k: 1, s: "Bar?"), tx)
 
     var
       s: seq[tuple[n: int, s: string, f: float, b: bool, bn: seq[byte], m: int, s3: string]]
@@ -142,7 +142,7 @@ suite "relational algrebra":
     require(dc != nil)
     let tx = dc.getDatabase("D").begin
 
-    V(t1).insert((n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
+    duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
     
     var
       s: seq[tuple[n: int, s: string, f: float, b: bool, bn: seq[byte], nx: int, sx: string]]
@@ -156,9 +156,9 @@ suite "relational algrebra":
     check(s[0].nx == 2)
     check(s[0].sx == "Uix")
 
-    V(t3).insert((m: 1, k: 1, s: ""), tx)
-    V(t3).insert((m: 2, k: 1, s: ""), tx)
-    V(t3).insert((m: 3, k: 2, s: ""), tx)
+    duro.insert(t3, (m: 1, k: 1, s: ""), tx)
+    duro.insert(t3, (m: 2, k: 1, s: ""), tx)
+    duro.insert(t3, (m: 3, k: 2, s: ""), tx)
 
     var
       s2: seq[tuple[k: int, mc: int, ms: int]]
@@ -180,7 +180,7 @@ suite "relational algrebra":
     require(dc != nil)
     let tx = dc.getDatabase("D").begin
 
-    V(t1).insert((n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
+    duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
 
     check(toInt(count(V(t1)), tx) == 1)
     check(toFloat(toExpr(1.0), tx) == 1.0)
