@@ -1226,7 +1226,7 @@ function main() {
   <li><a class="reference" href="#DContext"
     title="DContext* = ref object
   pEnv: pointer
-  execContext: array[60, char]"><wbr />DContext<span class="attachedType" style="visibility:hidden"></span></a></li>
+  execContext: RDB_exec_contextObj"><wbr />DContext<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#Database"
     title="Database* = ref object
   pDb: pointer
@@ -1432,13 +1432,13 @@ function main() {
     title="toTuple*[T](t: var T; exp: Expression; tx: Transaction)"><wbr />to<wbr />Tuple<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#load,seq[T],Expression,Transaction,varargs[SeqItem]"
     title="load*[T](s: var seq[T]; exp: Expression; tx: Transaction; order: varargs[SeqItem])"><wbr />load<span class="attachedType" style="visibility:hidden"></span></a></li>
-  <li><a class="reference" href="#insert,Expression,T,Transaction"
-    title="insert*[T](v: Expression; t: T; tx: Transaction)"><wbr />insert<span class="attachedType" style="visibility:hidden"></span></a></li>
-  <li><a class="reference" href="#delete,Expression,Expression,Transaction"
-    title="delete*(v: Expression; cond: Expression; tx: Transaction): int"><wbr />delete<span class="attachedType" style="visibility:hidden"></span></a></li>
-  <li><a class="reference" href="#updateExpr,Expression,Expression,Transaction,varargs[Expression]"
-    title="updateExpr*(v: Expression; cond: Expression; tx: Transaction;
-            updexprs: varargs[Expression]): int"><wbr />update<wbr />Expr<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#insertS,string,T,Transaction"
+    title="insertS*[T](tbName: string; t: T; tx: Transaction)"><wbr />insert<wbr />S<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#deleteS,string,Expression,Transaction"
+    title="deleteS*(tbName: string; cond: Expression; tx: Transaction): int"><wbr />delete<wbr />S<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#updateS,string,Expression,Transaction,varargs[Expression]"
+    title="updateS*(tbName: string; cond: Expression; tx: Transaction;
+         updexprs: varargs[Expression]): int"><wbr />update<wbr />S<span class="attachedType" style="visibility:hidden"></span></a></li>
 
   </ul>
 </li>
@@ -1455,8 +1455,12 @@ function main() {
     title="extend*(exp: Expression; assigns: varargs[untyped]): untyped"><wbr />extend<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#summarize.m,Expression,Expression,varargs[untyped]"
     title="summarize*(exp1: Expression; exp2: Expression; assigns: varargs[untyped]): untyped"><wbr />summarize<span class="attachedType" style="visibility:hidden"></span></a></li>
-  <li><a class="reference" href="#update.m,Expression,Expression,Transaction,varargs[untyped]"
-    title="update*(v: Expression; cond: Expression; tx: Transaction; assigns: varargs[untyped]): int"><wbr />update<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#insert.m,untyped,untyped,Transaction"
+    title="insert*(dest: untyped; src: untyped; tx: Transaction): typed"><wbr />insert<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#delete.m,untyped,Expression,Transaction"
+    title="delete*(dest: untyped; cond: Expression; tx: Transaction): int"><wbr />delete<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#update.m,untyped,Expression,Transaction,varargs[untyped]"
+    title="update*(dest: untyped; cond: Expression; tx: Transaction; assigns: varargs[untyped]): int"><wbr />update<span class="attachedType" style="visibility:hidden"></span></a></li>
 
   </ul>
 </li>
@@ -1470,7 +1474,7 @@ function main() {
   <div class="section" id="6">
 <h1><a class="toc-backref" href="#6">Imports</a></h1>
 <dl class="item">
-<a class="reference external" href="libduro.html">libduro</a>, <a class="reference external" href="macros.html">macros</a>, <a class="reference external" href="system.html">system</a>
+<a class="reference external" href="libduro.html">libduro</a>, <a class="reference external" href="macros.html">macros</a>
 </dl></div>
 <div class="section" id="7">
 <h1><a class="toc-backref" href="#7">Types</a></h1>
@@ -1487,7 +1491,7 @@ function main() {
 </dd>
 <dt id="DContext"><a name="DContext"></a><pre><span class="Identifier">DContext</span><span class="Operator">*</span> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">pEnv</span><span class="Other">:</span> <span class="Identifier">pointer</span>
-  <span class="Identifier">execContext</span><span class="Other">:</span> <span class="Identifier">array</span><span class="Other">[</span><span class="DecNumber">60</span><span class="Other">,</span> <span class="Identifier">char</span><span class="Other">]</span>
+  <span class="Identifier">execContext</span><span class="Other">:</span> <span class="Identifier">RDB_exec_contextObj</span>
 </pre></dt>
 <dd>
 
@@ -1988,18 +1992,18 @@ Extracts a single tuple from a table. Raises an error if the table is empty or i
 Copies a relational expression to a sequence.
 
 </dd>
-<dt id="insert"><a name="insert,Expression,T,Transaction"></a><pre><span class="Keyword">proc</span> <span class="Identifier">insert</span><span class="Operator">*</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">t</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">)</span></pre></dt>
+<dt id="insertS"><a name="insertS,string,T,Transaction"></a><pre><span class="Keyword">proc</span> <span class="Identifier">insertS</span><span class="Operator">*</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">tbName</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">t</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">)</span></pre></dt>
 <dd>
-Inserts a Nim tuple into the table given by 'v'.
+
 
 </dd>
-<dt id="delete"><a name="delete,Expression,Expression,Transaction"></a><pre><span class="Keyword">proc</span> <span class="Identifier">delete</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">discardable</span></div><span class="Other pragmaend">.}</span></pre></dt>
+<dt id="deleteS"><a name="deleteS,string,Expression,Transaction"></a><pre><span class="Keyword">proc</span> <span class="Identifier">deleteS</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">tbName</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">discardable</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
 Deletes the tuples for which 'cond' evaluates to true from the table given by 'v'.
 
 </dd>
-<dt id="updateExpr"><a name="updateExpr,Expression,Expression,Transaction,varargs[Expression]"></a><pre><span class="Keyword">proc</span> <span class="Identifier">updateExpr</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">;</span>
-                <span class="Identifier">updexprs</span><span class="Other">:</span> <span class="Identifier">varargs</span><span class="Other">[</span><span class="Identifier">Expression</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">discardable</span></div><span class="Other pragmaend">.}</span></pre></dt>
+<dt id="updateS"><a name="updateS,string,Expression,Transaction,varargs[Expression]"></a><pre><span class="Keyword">proc</span> <span class="Identifier">updateS</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">tbName</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">;</span>
+             <span class="Identifier">updexprs</span><span class="Other">:</span> <span class="Identifier">varargs</span><span class="Other">[</span><span class="Identifier">Expression</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">discardable</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
 
 
@@ -2034,10 +2038,20 @@ Creates an extend expression. Example: V(t).extend(new_attr1 := &lt;expression&g
 Creates a summarize expression. Example: V(t).summarize(V(t){ attr1 }, new_attr := count(V(attr2)))
 
 </dd>
-<dt id="update"><a name="update.m,Expression,Expression,Transaction,varargs[untyped]"></a><pre><span class="Keyword">macro</span> <span class="Identifier">update</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">v</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">;</span>
+<dt id="insert"><a name="insert.m,untyped,untyped,Transaction"></a><pre><span class="Keyword">macro</span> <span class="Identifier">insert</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">src</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">typed</span></pre></dt>
+<dd>
+Inserts a Nim tuple into the table given by 'dest'.
+
+</dd>
+<dt id="delete"><a name="delete.m,untyped,Expression,Transaction"></a><pre><span class="Keyword">macro</span> <span class="Identifier">delete</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">discardable</span></div><span class="Other pragmaend">.}</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="update"><a name="update.m,untyped,Expression,Transaction,varargs[untyped]"></a><pre><span class="Keyword">macro</span> <span class="Identifier">update</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">;</span>
              <span class="Identifier">assigns</span><span class="Other">:</span> <span class="Identifier">varargs</span><span class="Other">[</span><span class="Identifier">untyped</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span> <span class="Other pragmabegin">{.</span><div class="pragma"><span class="Identifier">discardable</span></div><span class="Other pragmaend">.}</span></pre></dt>
 <dd>
-Updates the table given by 'v'. Example: V(t1).update(V(n) $= 1, tx, s := toExpr(&quot;NewValue&quot;))
+Updates the table given by 'v'. Example: duro.update(t1, V(n) $= 1, tx, s := toExpr(&quot;NewValue&quot;))
 
 </dd>
 
@@ -2050,7 +2064,7 @@ Updates the table given by 'v'. Example: V(t1).update(V(n) $= 1, tx, s := toExpr
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2018-11-17 12:16:39 UTC</small>
+        <small>Made with Nim. Generated: 2018-11-25 22:43:12 UTC</small>
       </div>
     </div>
   </div>

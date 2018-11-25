@@ -25,11 +25,12 @@ suite "table insert, update, delete":
   test "insertUpdate":
     let dc = createContext("dbenv", 0)
     require(dc != nil)
-  
+
     let
       tx = dc.getDatabase("D").begin
-      intup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]] = (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)])
-    V(t1).insert(intup, tx)
+      intup: tuple[n: int, s: string, f: float, b: bool,
+                   bn: seq[byte]] = (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)])
+    duro.insert(t1, intup, tx)
 
     var
       outtup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]
@@ -40,7 +41,7 @@ suite "table insert, update, delete":
     check(outtup.b == true)
     check(outtup.bn == @[byte(255)])
 
-    V(t1).update(V(n) $= 1, tx, s := toExpr("ohh"), f := toExpr(1.0), b := toExpr(false),
+    duro.update(t1, V(n) $= 1, tx, s := toExpr("ohh"), f := toExpr(1.0), b := toExpr(false),
                  bn := toExpr(@[byte(1), byte(20)]))
 
     toTuple(outtup, V(t1), tx)
@@ -60,9 +61,9 @@ suite "table insert, update, delete":
     let
       tx = dc.getDatabase("D").begin
       intup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]] = (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)])
-    V(t1).insert(intup, tx)
+    duro.insert(t1, intup, tx)
 
-    check(V(t1).delete(V(n) $= 1, tx) == 1)
+    check(duro.delete(t1, V(n) $= 1, tx) == 1)
     check(toInt(opInv("count", V(t1)), tx) == 0)
     tx.commit
     dc.closeContext

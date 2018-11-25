@@ -1,6 +1,5 @@
 import libduro
 import macros
-import system
 
 type
    Expression* = ref object of RootObj
@@ -688,13 +687,12 @@ proc load*[T](s: var seq[T], exp: Expression, tx: Transaction, order: varargs[Se
       RDB_destroy_obj(addr(tbobj), addr(tx.database.context.execContext))
       RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
-proc insert*[T](v: Expression, t: T, tx: Transaction) =
-  ## Inserts a Nim tuple into the table given by 'v'.
-  let tb = RDB_get_table(cstring(VarExpression(v).name),
+proc insertS*[T](tbName: string, t: T, tx: Transaction) =
+  let tb = RDB_get_table(cstring(tbName),
                          addr(tx.database.context.execContext),
                          addr(tx.tx))
   if tb == nil:
-    raise newException(KeyError, "table " & VarExpression(v).name & " not found")
+    raise newException(KeyError, "table " & tbName & " not found")
   var obj: RDB_object
   RDB_init_obj(addr(obj))
   try:
@@ -735,27 +733,34 @@ proc insert*[T](v: Expression, t: T, tx: Transaction) =
   finally:
     RDB_destroy_obj(addr(obj), addr(tx.database.context.execContext))
 
-proc delete*(v: Expression, cond: Expression, tx: Transaction): int {.discardable.} =
+macro insert*(dest: untyped, src: untyped, tx: Transaction): typed =
+  ## Inserts a Nim tuple into the table given by 'dest'.
+  result = newCall("insertS", toStrLit(dest), src, tx)
+
+proc deleteS*(tbName: string, cond: Expression, tx: Transaction): int {.discardable.} =
   ## Deletes the tuples for which 'cond' evaluates to true from the table
   ## given by 'v'.
-  let tb = RDB_get_table(cstring(VarExpression(v).name),
+  let tb = RDB_get_table(cstring(tbname),
                          addr(tx.database.context.execContext),
                          addr(tx.tx))
   if tb == nil:
-    raise newException(KeyError, "table " & VarExpression(v).name & " not found")
+    raise newException(KeyError, "table " & tbName & " not found")
   let dcond = toDuroExpression(cond, addr(tx.database.context.execContext));
   result = RDB_delete(tb, dcond, addr(tx.database.context.execContext), addr(tx.tx));
   RDB_del_expr(dcond, addr(tx.database.context.execContext))
   if result < 0:
     raiseDuroError(addr(tx.database.context.execContext))
 
-proc updateExpr*(v: Expression, cond: Expression, tx: Transaction,
+macro delete*(dest: untyped, cond:Expression, tx: Transaction): int {.discardable.} =
+  result = newCall("deleteS", toStrLit(dest), cond, tx)
+
+proc updateS*(tbName: string, cond: Expression, tx: Transaction,
                  updexprs: varargs[Expression]): int {.discardable.} =
-  let tb = RDB_get_table(cstring(VarExpression(v).name),
+  let tb = RDB_get_table(cstring(tbName),
                          addr(tx.database.context.execContext),
                          addr(tx.tx))
   if tb == nil:
-    raise newException(KeyError, "table " & VarExpression(v).name & " not found")
+    raise newException(KeyError, "table " & tbName & " not found")
   var updates: seq[RDB_attr_update]
   newSeq(updates, updexprs.len div 2);
   for i in 0..<updates.len:
@@ -781,12 +786,12 @@ proc updateExpr*(v: Expression, cond: Expression, tx: Transaction,
       if updates[i].exp != nil:
         RDB_del_expr(updates[i].exp, addr(tx.database.context.execContext))
 
-macro update*(v: Expression, cond: Expression, tx: Transaction,
+macro update*(dest: untyped, cond: Expression, tx: Transaction,
               assigns: varargs[untyped]): int {.discardable.} =
   ## Updates the table given by 'v'.
-  ## Example: V(t1).update(V(n) $= 1, tx, s := toExpr("NewValue"))
+  ## Example: duro.update(t1, V(n) $= 1, tx, s := toExpr("NewValue"))
   var opargs: seq[NimNode] = newSeq[NimNode](2 * len(assigns) + 3);
-  opargs[0] = v
+  opargs[0] = toStrLit(dest)
   opargs[1] = cond
   opargs[2] = tx
   for i in 0..<len(assigns):
@@ -799,4 +804,4 @@ macro update*(v: Expression, cond: Expression, tx: Transaction,
     else:
       opargs[i * 2 + 3] = assigns[i][2]
     opargs[i * 2 + 4] = newCall("toExpr", toStrLit(assigns[i][1]))
-  result = newCall("updateExpr", opargs)
+  result = newCall("updateS", opargs)
