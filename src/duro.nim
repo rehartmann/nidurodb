@@ -38,7 +38,16 @@ type
 
    Transaction* = ref object
       database: Database
-      tx: array[7, pointer]
+      tx: RDB_transactionObj
+
+   AssignmentKind = enum
+     akCopy
+
+   Assignment* = object
+     case kind: AssignmentKind
+     of akCopy:
+       dest*: string
+       src: Expression
 
 proc raiseDuroError(pExecContext: RDB_exec_context) {.noReturn.} =
   let err = RDB_get_err(pExecContext)
@@ -805,3 +814,12 @@ macro update*(dest: untyped, cond: Expression, tx: Transaction,
       opargs[i * 2 + 3] = assigns[i][2]
     opargs[i * 2 + 4] = newCall("toExpr", toStrLit(assigns[i][1]))
   result = newCall("updateS", opargs)
+
+proc copyAssignment*(copyDest: string, copySrc: Expression): Assignment =
+  result = Assignment(kind: akCopy, dest: copyDest, src: copySrc)
+
+macro `:=`*(copyDest: untyped, copySrc: Expression): Assignment =
+  result = newCall("copyAssignment", toStrLit(copyDest), copySrc)
+
+proc assign*(assigns: varargs[Assignment], tx: Transaction) =
+  return
