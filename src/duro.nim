@@ -41,14 +41,23 @@ type
       tx: RDB_transactionObj
 
    AssignmentKind = enum
-     akCopy
+     akCopy, akInsert
 
-   Assignment* = object
+   Assignment* = ref object
      case kind: AssignmentKind
      of akCopy:
-       dest*: string
-       src: Expression
+       copyDest*: string
+       copySource*: RDB_object
+     of akInsert:
+       insertDest*: string
+       insertSource*: RDB_object
+       insertFlags: int
 
+var
+  execContext: RDB_exec_contextObj
+
+RDB_init_exec_context(addr(execContext))
+  
 proc raiseDuroError(pExecContext: RDB_exec_context) {.noReturn.} =
   let err = RDB_get_err(pExecContext)
   let errtyp = RDB_obj_type(err)
@@ -696,6 +705,39 @@ proc load*[T](s: var seq[T], exp: Expression, tx: Transaction, order: varargs[Se
       RDB_destroy_obj(addr(tbobj), addr(tx.database.context.execContext))
       RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
+proc toDuroObj[T](dest: ptr RDB_object, source: T) =
+  for name, value in fieldPairs(source):
+    when value is bool:
+      if RDB_tuple_set_bool(dest, cstring(name), cchar(value),
+                           addr(execContext)) != 0:
+        raiseDuroError(addr(execContext))
+    elif value is string:
+      if RDB_tuple_set_string(dest, cstring(name), cstring(value), 
+                           addr(execContext)) != 0:
+        raiseDuroError(addr(execContext))
+    elif value is int:
+      if RDB_tuple_set_int(dest, cstring(name), cint(value), 
+                           addr(execContext)) != 0:
+        raiseDuroError(addr(execContext))
+    elif value is float:
+      if RDB_tuple_set_float(dest, cstring(name), cdouble(value), 
+                           addr(execContext)) != 0:
+        raiseDuroError(addr(execContext))
+    elif value is seq[byte]:
+      var binobj: RDB_object
+      RDB_init_obj(addr(binobj))
+      try:
+        if RDB_binary_set(addr(binobj), 0, unsafeAddr(value[0]), len(value),
+                          addr(execContext)) != 0:
+          raiseDuroError(addr(execContext))
+        if RDB_tuple_set(dest, cstring(name), addr(binobj),
+                        addr(execContext)) != 0:
+          raiseDuroError(addr(execContext))
+      finally:
+        RDB_destroy_obj(addr(binobj), addr(execContext))
+    else:
+      raise newException(ValueError, "invalid value")
+
 proc insertS*[T](tbName: string, t: T, tx: Transaction) =
   let tb = RDB_get_table(cstring(tbName),
                          addr(tx.database.context.execContext),
@@ -704,38 +746,8 @@ proc insertS*[T](tbName: string, t: T, tx: Transaction) =
     raise newException(KeyError, "table " & tbName & " not found")
   var obj: RDB_object
   RDB_init_obj(addr(obj))
+  toDuroObj(addr(obj), t)
   try:
-    for name, value in fieldPairs(t):
-      when value is bool:
-        if RDB_tuple_set_bool(addr(obj), cstring(name), cchar(value),
-                           addr(tx.database.context.execContext)) != 0:
-          raiseDuroError(addr(tx.database.context.execContext))
-      elif value is string:
-        if RDB_tuple_set_string(addr(obj), cstring(name), cstring(value), 
-                           addr(tx.database.context.execContext)) != 0:
-          raiseDuroError(addr(tx.database.context.execContext))
-      elif value is int:
-        if RDB_tuple_set_int(addr(obj), cstring(name), cint(value), 
-                           addr(tx.database.context.execContext)) != 0:
-          raiseDuroError(addr(tx.database.context.execContext))
-      elif value is float:
-        if RDB_tuple_set_float(addr(obj), cstring(name), cdouble(value), 
-                           addr(tx.database.context.execContext)) != 0:
-          raiseDuroError(addr(tx.database.context.execContext))
-      elif value is seq[byte]:
-        var binobj: RDB_object
-        RDB_init_obj(addr(binobj))
-        try:
-          if RDB_binary_set(addr(binobj), 0, unsafeAddr(value[0]), len(value),
-                          addr(tx.database.context.execContext)) != 0:
-            raiseDuroError(addr(tx.database.context.execContext))
-          if RDB_tuple_set(addr(obj), cstring(name), addr(binobj),
-                        addr(tx.database.context.execContext)) != 0:
-            raiseDuroError(addr(tx.database.context.execContext))
-        finally:
-          RDB_destroy_obj(addr(binobj), addr(tx.database.context.execContext))
-      else:
-        raise newException(ValueError, "invalid value")
     if RDB_insert(tb, addr(obj), addr(tx.database.context.execContext),
                 addr(tx.tx)) != 0:
       raiseDuroError(addr(tx.database.context.execContext))
@@ -815,11 +827,62 @@ macro update*(dest: untyped, cond: Expression, tx: Transaction,
     opargs[i * 2 + 4] = newCall("toExpr", toStrLit(assigns[i][1]))
   result = newCall("updateS", opargs)
 
-proc copyAssignment*(copyDest: string, copySrc: Expression): Assignment =
-  result = Assignment(kind: akCopy, dest: copyDest, src: copySrc)
+proc copyAssignment*[T](dest: string, src: T): Assignment =
+  result = new Assignment(kind: akCopy, copyDest: dest)
+  RDB_init_obj(addr(result.copySource))
+  try:
+    toDuroObj(result.copySource, src)
+  except DuroError:
+    # RDB_destroy_obj()
+    raise getCurrentException()
 
-macro `:=`*(copyDest: untyped, copySrc: Expression): Assignment =
-  result = newCall("copyAssignment", toStrLit(copyDest), copySrc)
+macro `:=`*[T](dest: untyped, src: T): Assignment =
+  result = newCall("copyAssignment", toStrLit(dest), src)
 
-proc assign*(assigns: varargs[Assignment], tx: Transaction) =
-  return
+proc insertAssignment*[T](dest: string, src: T): Assignment =
+  result = new Assignment
+  result.kind = akInsert
+  result.insertDest = dest
+  result.insertFlags = 0
+  RDB_init_obj(addr(result.insertSource))
+  try:
+    toDuroObj(addr(result.insertSource), src)
+  except DuroError:
+    RDB_destroy_obj(addr(result.insertSource), addr(execContext))
+    raise getCurrentException()
+
+macro insert*[T](insDest: untyped, insSrc: T): Assignment =
+  result = newCall("insertAssignment", toStrLit(insDest), insSrc)
+
+proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
+  var copySeq: seq[RDB_ma_copy] = @[]
+  var insertSeq: seq[RDB_ma_insert] = @[]
+  for i in 0..<assigns.len:
+    case assigns[i].kind
+      of akCopy:
+        var maCopy: RDB_ma_copy
+        maCopy.tbp = RDB_get_table(cstring(assigns[i].copyDest),
+                         addr(tx.database.context.execContext),
+                         addr(tx.tx))
+        if maCopy.tbp == nil:
+          raise newException(KeyError, "table " & assigns[i].copyDest & " not found")
+        maCopy.objp = addr(assigns[i].copySource)
+        copySeq.add(maCopy)
+      of akInsert:
+        var maInsert: RDB_ma_insert
+        maInsert.tbp = RDB_get_table(cstring(assigns[i].insertDest),
+                         addr(tx.database.context.execContext),
+                         addr(tx.tx))
+        if maInsert.tbp == nil:
+          raise newException(KeyError, "table " & assigns[i].insertDest & " not found")
+        maInsert.objp = addr(assigns[i].insertSource)
+        insertSeq.add(maInsert)
+  result = int(RDB_multi_assign(cint(insertSeq.len), if insertSeq.len > 0: addr(insertSeq[0]) else: nil,
+                                cint(0), nil, cint(0), nil, cint(0), nil,
+                                cint(copySeq.len), if copySeq.len > 0: addr(copySeq[0]) else: nil,
+                                nil, nil,
+                                addr(tx.database.context.execContext), addr(tx.tx)))
+  for i in 0..<insertSeq.len:
+    RDB_destroy_obj(insertSeq[i].objp, addr(tx.database.context.execContext))
+  for i in 0..<copySeq.len:
+    RDB_destroy_obj(copySeq[i].objp, addr(tx.database.context.execContext))

@@ -35,7 +35,31 @@ type
   RDB_transactionObj* = object
     tx: array[7, pointer]  
 
-  RDB_transaction = ptr RDB_transactionObj
+  RDB_transaction* = ptr RDB_transactionObj
+
+  RDB_ma_insert* = object
+    tbp*: ptr RDB_object
+    objp*: ptr RDB_object
+    flags*: cint
+    
+  RDB_ma_update* = object
+    tbp*: ptr RDB_object
+    condp*: RDB_expression
+    updc*: cint
+    updv*: ptr RDB_attr_update
+
+  RDB_ma_delete* = object
+    tbp*: ptr RDB_object
+    condp*: RDB_expression
+
+  RDB_ma_vdelete* = object
+    tbp*: ptr RDB_object
+    objp*: ptr RDB_object
+    flags*: cint
+
+  RDB_ma_copy* = object
+    tbp*: ptr RDB_object
+    objp*: ptr RDB_object
 
 proc RDB_init_exec_context*(pExecContext: RDB_exec_context)
    {.cdecl, dynlib: libduro, importc.}
@@ -166,11 +190,18 @@ proc RDB_tuple_set_int*(pObj: ptr RDB_object, attrname: cstring, value: cint, pE
 proc RDB_tuple_set_float*(pObj: ptr RDB_object, attrname: cstring, value: cdouble, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_insert*(tb: pointer, pObj: ptr RDB_object, pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
+proc RDB_insert*(tb: ptr RDB_object, pObj: ptr RDB_object, pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_delete*(tb: pointer, cond: RDB_expression, pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
+proc RDB_delete*(tb: ptr RDB_object, cond: RDB_expression, pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
   {.cdecl, dynlib: libduro, importc.}
 
-proc RDB_update*(tb: pointer, cond: RDB_expression, updc: cint, updv: ptr RDB_attr_update, pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
+proc RDB_update*(tb: ptr RDB_object, cond: RDB_expression, updc: cint, updv: ptr RDB_attr_update,
+                 pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_multi_assign*(insc: cint, insv: ptr RDB_ma_insert, updc: cint, updv: ptr RDB_ma_update,
+                      delc: cint, delv: ptr RDB_ma_delete, vdelc: cint, vdelv: ptr RDB_ma_vdelete,
+                      copyc: cint, copyv: ptr RDB_ma_copy, getfn: pointer, getarg: pointer,
+                      pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
   {.cdecl, dynlib: libduro, importc.}

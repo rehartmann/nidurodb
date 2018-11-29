@@ -67,3 +67,23 @@ suite "table insert, update, delete":
     check(toInt(opInv("count", V(t1)), tx) == 0)
     tx.commit
     dc.closeContext
+
+  test "multiple assignment":
+    let dc = createContext("dbenv", 0)
+    require(dc != nil)
+  
+    let
+      tx = dc.getDatabase("D").begin
+    check(assign(duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)])), tx) == 1)
+
+    var
+      outtup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]
+    toTuple(outtup, V(t1), tx)
+    check(outtup.n == 1)
+    check(outtup.s == "Ui")
+    check(outtup.f == 1.5)
+    check(outtup.b == true)
+    check(outtup.bn == @[byte(255)])
+
+    tx.commit
+    dc.closeContext
