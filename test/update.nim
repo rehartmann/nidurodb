@@ -15,6 +15,7 @@ suite "table insert, update, delete":
                       "current_db := 'D';" &
                       "begin tx;" &
                       "var t1 real rel {n int, s string, f float, b boolean, bn binary} key{n};" &
+                      "var t2 real rel {n int, m int} key{n};" &
                       "commit;\"" &
                       "| durodt")
     require(errC == 0)
@@ -74,7 +75,12 @@ suite "table insert, update, delete":
   
     let
       tx = dc.getDatabase("D").begin
-    check(assign(duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)])), tx) == 1)
+
+    duro.insert(t2, (n: 1, m: 2), tx)
+
+    check(assign(duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)])),
+                 duro.delete(t2, V(n) $= 1),
+                 tx) == 2)
 
     var
       outtup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]
@@ -85,5 +91,7 @@ suite "table insert, update, delete":
     check(outtup.b == true)
     check(outtup.bn == @[byte(255)])
 
+    check(toInt(count(V(t2)), tx) == 0)
+    
     tx.commit
     dc.closeContext

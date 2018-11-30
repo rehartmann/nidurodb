@@ -41,17 +41,20 @@ type
       tx: RDB_transactionObj
 
    AssignmentKind = enum
-     akCopy, akInsert
+     akCopy, akInsert, akDelete
 
    Assignment* = ref object
      case kind: AssignmentKind
      of akCopy:
-       copyDest*: string
-       copySource*: RDB_object
+       copyDest: string
+       copySource: RDB_object
      of akInsert:
-       insertDest*: string
-       insertSource*: RDB_object
+       insertDest: string
+       insertSource: RDB_object
        insertFlags: int
+     of akDelete:
+       deleteDest: string
+       deleteCond: Expression
 
 var
   execContext: RDB_exec_contextObj
@@ -854,9 +857,19 @@ proc insertAssignment*[T](dest: string, src: T): Assignment =
 macro insert*[T](insDest: untyped, insSrc: T): Assignment =
   result = newCall("insertAssignment", toStrLit(insDest), insSrc)
 
+proc deleteAssignment*(dest: string, cond: Expression): Assignment =
+  result = new Assignment
+  result.kind = akDelete
+  result.deleteDest = dest
+  result.deleteCond = cond
+
+macro delete*(delDest: untyped, delCond: Expression): Assignment =
+  result = newCall("deleteAssignment", toStrLit(delDest), delCond)
+
 proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
   var copySeq: seq[RDB_ma_copy] = @[]
   var insertSeq: seq[RDB_ma_insert] = @[]
+  var deleteSeq: seq[RDB_ma_delete] = @[]
   for i in 0..<assigns.len:
     case assigns[i].kind
       of akCopy:
@@ -877,8 +890,19 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
           raise newException(KeyError, "table " & assigns[i].insertDest & " not found")
         maInsert.objp = addr(assigns[i].insertSource)
         insertSeq.add(maInsert)
+      of akDelete:
+        var maDelete: RDB_ma_delete
+        maDelete.tbp = RDB_get_table(cstring(assigns[i].deleteDest),
+                         addr(tx.database.context.execContext),
+                         addr(tx.tx))
+        if maDelete.tbp == nil:
+          raise newException(KeyError, "table " & assigns[i].deleteDest & " not found")
+        maDelete.condp = toDuroExpression(assigns[i].deleteCond, addr(tx.database.context.execContext))
+        deleteSeq.add(maDelete)
   result = int(RDB_multi_assign(cint(insertSeq.len), if insertSeq.len > 0: addr(insertSeq[0]) else: nil,
-                                cint(0), nil, cint(0), nil, cint(0), nil,
+                                cint(0), nil,
+                                cint(deleteSeq.len), if deleteSeq.len > 0: addr(deleteSeq[0]) else: nil,
+                                cint(0), nil,
                                 cint(copySeq.len), if copySeq.len > 0: addr(copySeq[0]) else: nil,
                                 nil, nil,
                                 addr(tx.database.context.execContext), addr(tx.tx)))
@@ -886,3 +910,5 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
     RDB_destroy_obj(insertSeq[i].objp, addr(tx.database.context.execContext))
   for i in 0..<copySeq.len:
     RDB_destroy_obj(copySeq[i].objp, addr(tx.database.context.execContext))
+  for i in 0..<deleteSeq.len:
+    RDB_del_expr(deleteSeq[i].condp, addr(tx.database.context.execContext))
