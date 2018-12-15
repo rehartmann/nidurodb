@@ -937,8 +937,11 @@ proc updateAssignment*(tbName: string, cond: Expression,
     result.attrUpdates[i] = attrUpdates[i]
 
 macro update*(dest: untyped, cond: Expression,
-              assigns: varargs[AttrUpdate]): Assignment =
-  result = newCall("updateAssignment", toStrLit(dest), cond, assigns)
+              attrUpdates: varargs[AttrUpdate]): Assignment =
+  var updateAssignmentArgs: seq[NimNode] = @[toStrLit(dest), cond]
+  for attrUpdate in attrUpdates:
+    updateAssignmentArgs.add(attrUpdate)
+  result = newCall("updateAssignment", updateAssignmentArgs)
 
 proc vDeleteAssignment*[T](dest: string, src: T): Assignment =
   result = new Assignment
@@ -990,9 +993,13 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
           raise newException(KeyError, "table " & assigns[i].updateDest & " not found")
         var attrUpdates = newSeq[RDB_attr_update](assigns[i].attrUpdates.len)
         for j in 0..<assigns[i].attrUpdates.len:
-          attrUpdates[i].name = cstring(assigns[i].attrUpdates[j].name)
-          attrUpdates[i].exp = toDuroExpression(assigns[i].attrUpdates[j].exp,
+          attrUpdates[j].name = cstring(assigns[i].attrUpdates[j].name)
+          attrUpdates[j].exp = toDuroExpression(assigns[i].attrUpdates[j].exp,
                                                 addr(tx.database.context.execContext))
+        if assigns[i].updateCond != nil:
+          maUpdate.condp = toDuroExpression(assigns[i].updateCond, addr(tx.database.context.execContext))
+        else:
+          maUpdate.condp = nil
         maUpdate.updc = cint(assigns[i].attrUpdates.len)
         maUpdate.updv = addr(attrUpdates[0])
         updateSeq.add(maUpdate)
@@ -1025,6 +1032,13 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
     RDB_destroy_obj(insertSeq[i].objp, addr(tx.database.context.execContext))
   for i in 0..<copySeq.len:
     RDB_destroy_obj(copySeq[i].objp, addr(tx.database.context.execContext))
+  for i in 0..<updateSeq.len:
+    if updateSeq[i].condp != nil:
+      RDB_del_expr(updateSeq[i].condp, addr(tx.database.context.execContext))
+    for j in 0..<updateSeq[i].updc:
+      let upd = cast[ptr RDB_attr_update]
+                    (cast[uint](updateSeq[i].updv) + cast[uint](j * sizeof(ptr RDB_attr_update)))
+      RDB_del_expr(upd.exp, addr(tx.database.context.execContext))
   for i in 0..<deleteSeq.len:
     RDB_del_expr(deleteSeq[i].condp, addr(tx.database.context.execContext))
   for i in 0..<vDeleteSeq.len:
