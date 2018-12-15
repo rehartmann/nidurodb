@@ -16,6 +16,8 @@ suite "table insert, update, delete":
                       "begin tx;" &
                       "var t1 real rel {n int, s string, f float, b boolean, bn binary} key{n};" &
                       "var t2 real rel {n int, m int} key{n};" &
+                      "var t3 real rel {n int, s string} key{n};" &
+                      "var t4 real rel {n int, s string} key{n};" &
                       "commit;\"" &
                       "| durodt")
     require(errC == 0)
@@ -77,10 +79,16 @@ suite "table insert, update, delete":
       tx = dc.getDatabase("D").begin
 
     duro.insert(t2, (n: 1, m: 2), tx)
+    duro.insert(t3, (n: 1, s: "Foo"), tx)
+    duro.insert(t4, (n: 1, s: "Foo"), tx)
+    duro.insert(t4, (n: 2, s: "Bar"), tx)
 
+# Update does not work because of compiler bug
     check(assign(duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)])),
+#                 duro.update(t3, V(n) $= 1, s := toExpr("Bar")),
                  duro.delete(t2, V(n) $= 1),
-                 tx) == 2)
+                 duro.delete(t4, (n: 1, s: "Foo")),
+                 tx) == 3)
 
     var
       outtup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]
@@ -92,6 +100,13 @@ suite "table insert, update, delete":
     check(outtup.bn == @[byte(255)])
 
     check(toInt(count(V(t2)), tx) == 0)
+
+    check(toInt(count(V(t4)), tx) == 1)
+    var
+      outtup2: tuple[n: int, s: string]
+    toTuple(outtup2, V(t4), tx)
+    check(outtup2.n == 2)
+    check(outtup2.s == "Bar")
     
     tx.commit
     dc.closeContext

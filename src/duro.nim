@@ -41,7 +41,11 @@ type
       tx: RDB_transactionObj
 
    AssignmentKind = enum
-     akCopy, akInsert, akDelete
+     akCopy, akInsert, akUpdate, akDelete, akVDelete
+
+   AttrUpdate* = object
+     name: string
+     exp: Expression
 
    Assignment* = ref object
      case kind: AssignmentKind
@@ -52,9 +56,17 @@ type
        insertDest: string
        insertSource: RDB_object
        insertFlags: int
+     of akUpdate:
+       updateDest: string
+       updateCond: Expression
+       attrUpdates: seq[AttrUpdate]
      of akDelete:
        deleteDest: string
        deleteCond: Expression
+     of akVDelete:
+       vDeleteDest: string
+       vDeleteSource: RDB_object
+       vDeleteFlags: int
 
 var
   execContext: RDB_exec_contextObj
@@ -830,8 +842,10 @@ macro update*(dest: untyped, cond: Expression, tx: Transaction,
     opargs[i * 2 + 4] = newCall("toExpr", toStrLit(assigns[i][1]))
   result = newCall("updateS", opargs)
 
-proc copyAssignment*[T](dest: string, src: T): Assignment =
-  result = new Assignment(kind: akCopy, copyDest: dest)
+proc copyAssignment*[T: tuple](dest: string, src: T): Assignment =
+  result = new Assignment
+  result.kind = akCopy
+  result.copyDest = dest
   RDB_init_obj(addr(result.copySource))
   try:
     toDuroObj(result.copySource, src)
@@ -839,8 +853,15 @@ proc copyAssignment*[T](dest: string, src: T): Assignment =
     # RDB_destroy_obj()
     raise getCurrentException()
 
-macro `:=`*[T](dest: untyped, src: T): Assignment =
+macro `:=`*[T: tuple](dest: untyped, src: T): Assignment =
   result = newCall("copyAssignment", toStrLit(dest), src)
+
+proc attributeAssignment*(dest: string, src: Expression): AttrUpdate =
+  result.name = dest
+  result.exp = src
+
+macro `:=`*(dest: untyped, src: Expression): AttrUpdate =
+  result = newCall("attributeAssignment", toStrLit(dest), src)
 
 proc insertAssignment*[T](dest: string, src: T): Assignment =
   result = new Assignment
@@ -866,10 +887,42 @@ proc deleteAssignment*(dest: string, cond: Expression): Assignment =
 macro delete*(delDest: untyped, delCond: Expression): Assignment =
   result = newCall("deleteAssignment", toStrLit(delDest), delCond)
 
+proc updateAssignment*(tbName: string, cond: Expression,
+                 attrUpdates: varargs[AttrUpdate]): Assignment =
+  result = new Assignment
+  result.kind = akUpdate
+  result.updateDest = tbName
+  result.updateCond = cond
+
+  result.attrUpdates = newSeq[AttrUpdate](attrUpdates.len)
+  for i in 0..<result.attrUpdates.len:
+    result.attrUpdates[i] = attrUpdates[i]
+
+macro update*(dest: untyped, cond: Expression,
+              assigns: varargs[AttrUpdate]): Assignment =
+  result = newCall("updateAssignment", toStrLit(dest), cond, assigns)
+
+proc vDeleteAssignment*[T](dest: string, src: T): Assignment =
+  result = new Assignment
+  result.kind = akVDelete
+  result.vDeleteDest = dest
+  result.vDeleteFlags = 0
+  RDB_init_obj(addr(result.vDeleteSource))
+  try:
+    toDuroObj(addr(result.vDeleteSource), src)
+  except DuroError:
+    RDB_destroy_obj(addr(result.vDeleteSource), addr(execContext))
+    raise getCurrentException()
+
+macro delete*[T](delDest: untyped, delSrc: T): Assignment =
+  result = newCall("vDeleteAssignment", toStrLit(delDest), delSrc)
+
 proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
   var copySeq: seq[RDB_ma_copy] = @[]
   var insertSeq: seq[RDB_ma_insert] = @[]
+  var updateSeq: seq[RDB_ma_update] = @[]
   var deleteSeq: seq[RDB_ma_delete] = @[]
+  var vDeleteSeq: seq[RDB_ma_vdelete] = @[]
   for i in 0..<assigns.len:
     case assigns[i].kind
       of akCopy:
@@ -890,6 +943,21 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
           raise newException(KeyError, "table " & assigns[i].insertDest & " not found")
         maInsert.objp = addr(assigns[i].insertSource)
         insertSeq.add(maInsert)
+      of akUpdate:
+        var maUpdate: RDB_ma_update
+        maUpdate.tbp = RDB_get_table(cstring(assigns[i].updateDest),
+                         addr(tx.database.context.execContext),
+                         addr(tx.tx))
+        if maUpdate.tbp == nil:
+          raise newException(KeyError, "table " & assigns[i].updateDest & " not found")
+        var attrUpdates = newSeq[RDB_attr_update](assigns[i].attrUpdates.len)
+        for j in 0..<assigns[i].attrUpdates.len:
+          attrUpdates[i].name = cstring(assigns[i].attrUpdates[j].name)
+          attrUpdates[i].exp = toDuroExpression(assigns[i].attrUpdates[j].exp,
+                                                addr(tx.database.context.execContext))
+        maUpdate.updc = cint(assigns[i].attrUpdates.len)
+        maUpdate.updv = addr(attrUpdates[0])
+        updateSeq.add(maUpdate)
       of akDelete:
         var maDelete: RDB_ma_delete
         maDelete.tbp = RDB_get_table(cstring(assigns[i].deleteDest),
@@ -899,10 +967,19 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
           raise newException(KeyError, "table " & assigns[i].deleteDest & " not found")
         maDelete.condp = toDuroExpression(assigns[i].deleteCond, addr(tx.database.context.execContext))
         deleteSeq.add(maDelete)
+      of akVDelete:
+        var maVDelete: RDB_ma_vdelete
+        maVDelete.tbp = RDB_get_table(cstring(assigns[i].vDeleteDest),
+                         addr(tx.database.context.execContext),
+                         addr(tx.tx))
+        if maVDelete.tbp == nil:
+          raise newException(KeyError, "table " & assigns[i].vDeleteDest & " not found")
+        maVDelete.objp = addr(assigns[i].vDeleteSource)
+        vDeleteSeq.add(maVDelete)
   result = int(RDB_multi_assign(cint(insertSeq.len), if insertSeq.len > 0: addr(insertSeq[0]) else: nil,
-                                cint(0), nil,
+                                cint(updateSeq.len), if updateSeq.len > 0: addr(updateSeq[0]) else: nil,
                                 cint(deleteSeq.len), if deleteSeq.len > 0: addr(deleteSeq[0]) else: nil,
-                                cint(0), nil,
+                                cint(vDeleteSeq.len), if vDeleteSeq.len > 0: addr(vDeleteSeq[0]) else: nil,
                                 cint(copySeq.len), if copySeq.len > 0: addr(copySeq[0]) else: nil,
                                 nil, nil,
                                 addr(tx.database.context.execContext), addr(tx.tx)))
