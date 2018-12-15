@@ -1001,7 +1001,8 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
         else:
           maUpdate.condp = nil
         maUpdate.updc = cint(assigns[i].attrUpdates.len)
-        maUpdate.updv = addr(attrUpdates[0])
+        if maUpdate.updc > 0:
+          maUpdate.updv = addr(attrUpdates[0])
         updateSeq.add(maUpdate)
       of akDelete:
         var maDelete: RDB_ma_delete
