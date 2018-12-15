@@ -61,6 +61,12 @@ type
     tbp*: ptr RDB_object
     objp*: ptr RDB_object
 
+  RDB_attr* = object
+    name*: cstring
+    typ*: pointer
+    default*: RDB_expression
+    options*: cint
+
 proc RDB_init_exec_context*(pExecContext: RDB_exec_context)
    {.cdecl, dynlib: libduro, importc.}
 
@@ -204,4 +210,8 @@ proc RDB_multi_assign*(insc: cint, insv: ptr RDB_ma_insert, updc: cint, updv: pt
                       delc: cint, delv: ptr RDB_ma_delete, vdelc: cint, vdelv: ptr RDB_ma_vdelete,
                       copyc: cint, copyv: ptr RDB_ma_copy, getfn: pointer, getarg: pointer,
                       pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_init_table*(tb: ptr RDB_object, name: cstring, attrc: cint, attrv: ptr RDB_attr,
+                   keyc: cint, keyv: pointer, pExecContext: RDB_exec_context): cint
   {.cdecl, dynlib: libduro, importc.}

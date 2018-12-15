@@ -110,3 +110,32 @@ suite "table insert, update, delete":
     
     tx.commit
     dc.closeContext
+
+  test "assigning table":
+    let dc = createContext("dbenv", 0)
+    require(dc != nil)
+
+    let
+      tx = dc.getDatabase("D").begin
+    check(assign(t1 := @[(n: 1, s: "Uii", f: 1.5, b: true, bn: @[byte(255)]),
+                         (n: 2, s: "yoyo", f: 2.0, b: false, bn: @[byte(0)])],
+                 tx) == 1)
+
+    check(toInt(count(V(t1)), tx) == 2)
+
+    var
+      s: seq[tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]]
+    load(s, V(t1), tx, SeqItem(attr: "n", dir: asc))
+    check(s[0].n == 1)
+    check(s[0].s == "Uii")
+    check(s[0].f == 1.5)
+    check(s[0].b == true)
+    check(s[0].bn == @[byte(255)])
+    check(s[1].n == 2)
+    check(s[1].s == "yoyo")
+    check(s[1].f == 2.0)
+    check(s[1].b == false)
+    check(s[1].bn == @[byte(0)])
+
+    tx.commit
+    dc.closeContext

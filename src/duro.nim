@@ -720,7 +720,7 @@ proc load*[T](s: var seq[T], exp: Expression, tx: Transaction, order: varargs[Se
       RDB_destroy_obj(addr(tbobj), addr(tx.database.context.execContext))
       RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
-proc toDuroObj[T](dest: ptr RDB_object, source: T) =
+proc toDuroObj[T: tuple](dest: ptr RDB_object, source: T) =
   for name, value in fieldPairs(source):
     when value is bool:
       if RDB_tuple_set_bool(dest, cstring(name), cchar(value),
@@ -752,6 +752,44 @@ proc toDuroObj[T](dest: ptr RDB_object, source: T) =
         RDB_destroy_obj(addr(binobj), addr(execContext))
     else:
       raise newException(ValueError, "invalid value")
+
+proc toDuroObj[T: tuple](dest: ptr RDB_object, source: seq[T]) =
+  var
+    attr: RDB_attr
+    attrs: seq[RDB_attr] = @[]
+    t: T
+  for tname, value in fieldPairs(t):
+    attr.name = cstring(tname)
+    when value is bool:
+      attr.typ = addr(RDB_BOOLEAN)
+    elif value is string:
+      attr.typ = addr(RDB_STRING)
+    elif value is int:
+      attr.typ = addr(RDB_INTEGER)
+    elif value is float:
+      attr.typ = addr(RDB_FLOAT)
+    elif value is seq[byte]:
+      attr.typ = addr(RDB_BINARY)
+    else:
+      raise newException(ValueError, "invalid value")
+    attrs.add(attr)
+
+  if RDB_init_table(dest, nil, cint(attrs.len), if attrs.len > 0: addr(attrs[0]) else: nil,
+                    0, nil, addr(execContext)) != RDB_OK:
+    raiseDuroError(addr(execContext))
+
+  for tup in source:
+    var tupobj: RDB_object
+    RDB_init_obj(addr(tupobj))
+    try:
+      toDuroObj(addr(tupobj), tup)
+    except DuroError:
+      RDB_destroy_obj(addr(tupobj), addr(execContext))
+      raise getCurrentException()
+    let res = RDB_insert(dest, addr(tupobj), addr(execContext), nil);
+    RDB_destroy_obj(addr(tupobj), addr(execContext))
+    if res != 0:
+      raiseDuroError(addr(execContext))
 
 proc insertS*[T](tbName: string, t: T, tx: Transaction) =
   let tb = RDB_get_table(cstring(tbName),
@@ -842,18 +880,18 @@ macro update*(dest: untyped, cond: Expression, tx: Transaction,
     opargs[i * 2 + 4] = newCall("toExpr", toStrLit(assigns[i][1]))
   result = newCall("updateS", opargs)
 
-proc copyAssignment*[T: tuple](dest: string, src: T): Assignment =
+proc copyAssignment*[T](dest: string, src: T): Assignment =
   result = new Assignment
   result.kind = akCopy
   result.copyDest = dest
   RDB_init_obj(addr(result.copySource))
   try:
-    toDuroObj(result.copySource, src)
+    toDuroObj(addr(result.copySource), src)
   except DuroError:
-    # RDB_destroy_obj()
+    RDB_destroy_obj(addr(result.insertSource), addr(execContext))
     raise getCurrentException()
 
-macro `:=`*[T: tuple](dest: untyped, src: T): Assignment =
+macro `:=`*[T](dest: untyped, src: T): Assignment =
   result = newCall("copyAssignment", toStrLit(dest), src)
 
 proc attributeAssignment*(dest: string, src: Expression): AttrUpdate =
@@ -989,3 +1027,5 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
     RDB_destroy_obj(copySeq[i].objp, addr(tx.database.context.execContext))
   for i in 0..<deleteSeq.len:
     RDB_del_expr(deleteSeq[i].condp, addr(tx.database.context.execContext))
+  for i in 0..<vDeleteSeq.len:
+    RDB_destroy_obj(vDeleteSeq[i].objp, addr(tx.database.context.execContext))
