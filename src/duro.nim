@@ -959,6 +959,17 @@ macro delete*[T](delDest: untyped, delSrc: T): Assignment =
   result = newCall("vDeleteAssignment", toStrLit(delDest), delSrc)
 
 proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
+  ## Multiple assignment.
+  ## Supports copying, insert, update, and delete in a single call.
+  ## Example:
+  ## ::
+  ## assign(duro.insert(t1, (n: 1, s: "Ooey")),
+  ##        duro.update(t2, V(n) $= 1, s := toExpr("Bar")),
+  ##        duro.delete(t3, V(n) $= 1),
+  ##        duro.delete(t4, (n: 1, s: "Foo")),
+  ##        t5 := @[(n: 1, s: "foo"),
+  ##                (n: 2, s: "bar")]
+  ##        tx)
   var copySeq: seq[RDB_ma_copy] = @[]
   var insertSeq: seq[RDB_ma_insert] = @[]
   var updateSeq: seq[RDB_ma_update] = @[]

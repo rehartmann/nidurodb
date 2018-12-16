@@ -1234,7 +1234,36 @@ function main() {
   <li><a class="reference" href="#Transaction"
     title="Transaction* = ref object
   database: Database
-  tx: array[7, pointer]"><wbr />Transaction<span class="attachedType" style="visibility:hidden"></span></a></li>
+  tx: RDB_transactionObj"><wbr />Transaction<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#AttrUpdate"
+    title="AttrUpdate* = object
+  name: string
+  exp: Expression"><wbr />Attr<wbr />Update<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#Assignment"
+    title="Assignment* = ref object
+  case kind: AssignmentKind
+  of akCopy:
+      copyDest: string
+      copySource: RDB_object
+
+  of akInsert:
+      insertDest: string
+      insertSource: RDB_object
+      insertFlags: int
+
+  of akUpdate:
+      updateDest: string
+      updateCond: Expression
+      attrUpdates: seq[AttrUpdate]
+
+  of akDelete:
+      deleteDest: string
+      deleteCond: Expression
+
+  of akVDelete:
+      vDeleteDest: string
+      vDeleteSource: RDB_object
+      vDeleteFlags: int"><wbr />Assignment<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#Direction"
     title="Direction* = enum
   asc, desc"><wbr />Direction<span class="attachedType" style="visibility:hidden"></span></a></li>
@@ -1439,6 +1468,20 @@ function main() {
   <li><a class="reference" href="#updateS,string,Expression,Transaction,varargs[Expression]"
     title="updateS*(tbName: string; cond: Expression; tx: Transaction;
          updexprs: varargs[Expression]): int"><wbr />update<wbr />S<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#copyAssignment,string,T"
+    title="copyAssignment*[T](dest: string; src: T): Assignment"><wbr />copy<wbr />Assignment<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#attributeAssignment,string,Expression"
+    title="attributeAssignment*(dest: string; src: Expression): AttrUpdate"><wbr />attribute<wbr />Assignment<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#insertAssignment,string,T"
+    title="insertAssignment*[T](dest: string; src: T): Assignment"><wbr />insert<wbr />Assignment<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#deleteAssignment,string,Expression"
+    title="deleteAssignment*(dest: string; cond: Expression): Assignment"><wbr />delete<wbr />Assignment<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#updateAssignment,string,Expression,varargs[AttrUpdate]"
+    title="updateAssignment*(tbName: string; cond: Expression; attrUpdates: varargs[AttrUpdate]): Assignment"><wbr />update<wbr />Assignment<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#vDeleteAssignment,string,T"
+    title="vDeleteAssignment*[T](dest: string; src: T): Assignment"><wbr />v<wbr />Delete<wbr />Assignment<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#assign,varargs[Assignment],Transaction"
+    title="assign*(assigns: varargs[Assignment]; tx: Transaction): int"><wbr />assign<span class="attachedType" style="visibility:hidden"></span></a></li>
 
   </ul>
 </li>
@@ -1461,6 +1504,18 @@ function main() {
     title="delete*(dest: untyped; cond: Expression; tx: Transaction): int"><wbr />delete<span class="attachedType" style="visibility:hidden"></span></a></li>
   <li><a class="reference" href="#update.m,untyped,Expression,Transaction,varargs[untyped]"
     title="update*(dest: untyped; cond: Expression; tx: Transaction; assigns: varargs[untyped]): int"><wbr />update<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#:=.m,untyped,T"
+    title="`:=`*[T](dest: untyped; src: T): Assignment">`<wbr />:=`<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#:=.m,untyped,Expression"
+    title="`:=`*(dest: untyped; src: Expression): AttrUpdate">`<wbr />:=`<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#insert.m,untyped,T"
+    title="insert*[T](insDest: untyped; insSrc: T): Assignment"><wbr />insert<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#delete.m,untyped,Expression"
+    title="delete*(delDest: untyped; delCond: Expression): Assignment"><wbr />delete<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#update.m,untyped,Expression,varargs[AttrUpdate]"
+    title="update*(dest: untyped; cond: Expression; attrUpdates: varargs[AttrUpdate]): Assignment"><wbr />update<span class="attachedType" style="visibility:hidden"></span></a></li>
+  <li><a class="reference" href="#delete.m,untyped,T"
+    title="delete*[T](delDest: untyped; delSrc: T): Assignment"><wbr />delete<span class="attachedType" style="visibility:hidden"></span></a></li>
 
   </ul>
 </li>
@@ -1507,8 +1562,46 @@ function main() {
 </dd>
 <dt id="Transaction"><a name="Transaction"></a><pre><span class="Identifier">Transaction</span><span class="Operator">*</span> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">database</span><span class="Other">:</span> <span class="Identifier">Database</span>
-  <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">array</span><span class="Other">[</span><span class="DecNumber">7</span><span class="Other">,</span> <span class="Identifier">pointer</span><span class="Other">]</span>
+  <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">RDB_transactionObj</span>
 </pre></dt>
+<dd>
+
+
+</dd>
+<dt id="AttrUpdate"><a name="AttrUpdate"></a><pre><span class="Identifier">AttrUpdate</span><span class="Operator">*</span> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">exp</span><span class="Other">:</span> <span class="Identifier">Expression</span>
+</pre></dt>
+<dd>
+
+
+</dd>
+<dt id="Assignment"><a name="Assignment"></a><pre><span class="Identifier">Assignment</span><span class="Operator">*</span> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Keyword">case</span> <span class="Identifier">kind</span><span class="Other">:</span> <span class="Identifier">AssignmentKind</span>
+  <span class="Keyword">of</span> <span class="Identifier">akCopy</span><span class="Other">:</span>
+      <span class="Identifier">copyDest</span><span class="Other">:</span> <span class="Identifier">string</span>
+      <span class="Identifier">copySource</span><span class="Other">:</span> <span class="Identifier">RDB_object</span>
+
+  <span class="Keyword">of</span> <span class="Identifier">akInsert</span><span class="Other">:</span>
+      <span class="Identifier">insertDest</span><span class="Other">:</span> <span class="Identifier">string</span>
+      <span class="Identifier">insertSource</span><span class="Other">:</span> <span class="Identifier">RDB_object</span>
+      <span class="Identifier">insertFlags</span><span class="Other">:</span> <span class="Identifier">int</span>
+
+  <span class="Keyword">of</span> <span class="Identifier">akUpdate</span><span class="Other">:</span>
+      <span class="Identifier">updateDest</span><span class="Other">:</span> <span class="Identifier">string</span>
+      <span class="Identifier">updateCond</span><span class="Other">:</span> <span class="Identifier">Expression</span>
+      <span class="Identifier">attrUpdates</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">AttrUpdate</span><span class="Other">]</span>
+
+  <span class="Keyword">of</span> <span class="Identifier">akDelete</span><span class="Other">:</span>
+      <span class="Identifier">deleteDest</span><span class="Other">:</span> <span class="Identifier">string</span>
+      <span class="Identifier">deleteCond</span><span class="Other">:</span> <span class="Identifier">Expression</span>
+
+  <span class="Keyword">of</span> <span class="Identifier">akVDelete</span><span class="Other">:</span>
+      <span class="Identifier">vDeleteDest</span><span class="Other">:</span> <span class="Identifier">string</span>
+      <span class="Identifier">vDeleteSource</span><span class="Other">:</span> <span class="Identifier">RDB_object</span>
+      <span class="Identifier">vDeleteFlags</span><span class="Other">:</span> <span class="Identifier">int</span>
+
+  </pre></dt>
 <dd>
 
 
@@ -2008,6 +2101,49 @@ Deletes the tuples for which 'cond' evaluates to true from the table given by 'v
 
 
 </dd>
+<dt id="copyAssignment"><a name="copyAssignment,string,T"></a><pre><span class="Keyword">proc</span> <span class="Identifier">copyAssignment</span><span class="Operator">*</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">src</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="attributeAssignment"><a name="attributeAssignment,string,Expression"></a><pre><span class="Keyword">proc</span> <span class="Identifier">attributeAssignment</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">src</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">AttrUpdate</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="insertAssignment"><a name="insertAssignment,string,T"></a><pre><span class="Keyword">proc</span> <span class="Identifier">insertAssignment</span><span class="Operator">*</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">src</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="deleteAssignment"><a name="deleteAssignment,string,Expression"></a><pre><span class="Keyword">proc</span> <span class="Identifier">deleteAssignment</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="updateAssignment"><a name="updateAssignment,string,Expression,varargs[AttrUpdate]"></a><pre><span class="Keyword">proc</span> <span class="Identifier">updateAssignment</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">tbName</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span>
+                      <span class="Identifier">attrUpdates</span><span class="Other">:</span> <span class="Identifier">varargs</span><span class="Other">[</span><span class="Identifier">AttrUpdate</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="vDeleteAssignment"><a name="vDeleteAssignment,string,T"></a><pre><span class="Keyword">proc</span> <span class="Identifier">vDeleteAssignment</span><span class="Operator">*</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">src</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="assign"><a name="assign,varargs[Assignment],Transaction"></a><pre><span class="Keyword">proc</span> <span class="Identifier">assign</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">assigns</span><span class="Other">:</span> <span class="Identifier">varargs</span><span class="Other">[</span><span class="Identifier">Assignment</span><span class="Other">]</span><span class="Other">;</span> <span class="Identifier">tx</span><span class="Other">:</span> <span class="Identifier">Transaction</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
+<dd>
+Multiple assignment. Supports copying, insert, update, and delete in a single call. Example:<pre>assign(duro.insert(t1, (n: 1, s: &quot;Ooey&quot;)),
+       duro.update(t2, V(n) $= 1, s := toExpr(&quot;Bar&quot;)),
+       duro.delete(t3, V(n) $= 1),
+       duro.delete(t4, (n: 1, s: &quot;Foo&quot;)),
+       t5 := @[(n: 1, s: &quot;foo&quot;),
+               (n: 2, s: &quot;bar&quot;)]
+       tx)</pre>
+
+
+</dd>
 
 </dl></div>
 <div class="section" id="16">
@@ -2054,6 +2190,36 @@ Inserts a Nim tuple into the table given by 'dest'.
 Updates the table given by 'v'. Example: duro.update(t1, V(n) $= 1, tx, s := toExpr(&quot;NewValue&quot;))
 
 </dd>
+<dt id=":="><a name=":=.m,untyped,T"></a><pre><span class="Keyword">macro</span> <span class="Other">`</span><span class="Operator">:=</span><span class="Other">`</span><span class="Operator">*</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">src</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id=":="><a name=":=.m,untyped,Expression"></a><pre><span class="Keyword">macro</span> <span class="Other">`</span><span class="Operator">:=</span><span class="Other">`</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">src</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">AttrUpdate</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="insert"><a name="insert.m,untyped,T"></a><pre><span class="Keyword">macro</span> <span class="Identifier">insert</span><span class="Operator">*</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">insDest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">insSrc</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="delete"><a name="delete.m,untyped,Expression"></a><pre><span class="Keyword">macro</span> <span class="Identifier">delete</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">delDest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">delCond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="update"><a name="update.m,untyped,Expression,varargs[AttrUpdate]"></a><pre><span class="Keyword">macro</span> <span class="Identifier">update</span><span class="Operator">*</span><span class="Other">(</span><span class="Identifier">dest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">cond</span><span class="Other">:</span> <span class="Identifier">Expression</span><span class="Other">;</span> <span class="Identifier">attrUpdates</span><span class="Other">:</span> <span class="Identifier">varargs</span><span class="Other">[</span><span class="Identifier">AttrUpdate</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
+<dt id="delete"><a name="delete.m,untyped,T"></a><pre><span class="Keyword">macro</span> <span class="Identifier">delete</span><span class="Operator">*</span><span class="Other">[</span><span class="Identifier">T</span><span class="Other">]</span><span class="Other">(</span><span class="Identifier">delDest</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">;</span> <span class="Identifier">delSrc</span><span class="Other">:</span> <span class="Identifier">T</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Assignment</span></pre></dt>
+<dd>
+
+
+</dd>
 
 </dl></div>
 
@@ -2064,7 +2230,7 @@ Updates the table given by 'v'. Example: duro.update(t1, V(n) $= 1, tx, s := toE
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2018-11-25 22:43:12 UTC</small>
+        <small>Made with Nim. Generated: 2018-12-16 10:20:34 UTC</small>
       </div>
     </div>
   </div>
