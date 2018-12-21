@@ -968,7 +968,7 @@ proc assign*(assigns: varargs[Assignment], tx: Transaction): int =
   ##        duro.delete(t3, V(n) $= 1),
   ##        duro.delete(t4, (n: 1, s: "Foo")),
   ##        t5 := @[(n: 1, s: "foo"),
-  ##                (n: 2, s: "bar")]
+  ##                (n: 2, s: "bar")],
   ##        tx)
   var copySeq: seq[RDB_ma_copy] = @[]
   var insertSeq: seq[RDB_ma_insert] = @[]
