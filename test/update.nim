@@ -37,7 +37,7 @@ suite "table insert, update, delete":
 
     var
       outtup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]
-    toTuple(outtup, V(t1), tx)
+    toTuple(outtup, tupleFrom(V(t1)), tx)
     check(outtup.n == 1)
     check(outtup.s == "Ui")
     check(outtup.f == 1.5)
@@ -47,7 +47,7 @@ suite "table insert, update, delete":
     duro.update(t1, V(n) $= 1, tx, s := toExpr("ohh"), f := toExpr(1.0), b := toExpr(false),
                  bn := toExpr(@[byte(1), byte(20)]))
 
-    toTuple(outtup, V(t1), tx)
+    toTuple(outtup, tupleFrom(V(t1)), tx)
     check(outtup.n == 1)
     check(outtup.s == "ohh")
     check(outtup.f == 1.0)
@@ -91,7 +91,7 @@ suite "table insert, update, delete":
 
     var
       outtup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]
-    toTuple(outtup, V(t1), tx)
+    toTuple(outtup, tupleFrom(V(t1)), tx)
     check(outtup.n == 1)
     check(outtup.s == "Ui")
     check(outtup.f == 1.5)
@@ -100,14 +100,14 @@ suite "table insert, update, delete":
 
     var
       outtup2: tuple[n: int, s: string]
-    toTuple(outtup2, V(t3), tx)
+    toTuple(outtup2, tupleFrom(V(t3)), tx)
     check(outtup2.n == 1)
     check(outtup2.s == "Bar")
 
     check(toInt(count(V(t2)), tx) == 0)
 
     check(toInt(count(V(t4)), tx) == 1)
-    toTuple(outtup2, V(t4), tx)
+    toTuple(outtup2, tupleFrom(V(t4)), tx)
     check(outtup2.n == 2)
     check(outtup2.s == "Bar")
     

@@ -39,11 +39,13 @@ To make the interpreter available on the command line, add the bin directory to 
 
 ## Running the tests
 
-After adding the DuroDBMS lib directory to the library path and the DuroDBMS bin directory to the system path, go to the test directory and type:
+After adding the DuroDBMS lib directory to the library path and the DuroDBMS bin directory to the system path,
+go to the test directory and type:
 
 ```
 nim -p:../src c -r update.nim
 nim -p:../src c -r ra.nim
+nim -p:../src c -r datetime.nim
 ```
 
 ## Authors

@@ -46,7 +46,7 @@ suite "relational algrebra":
 
     var
       outtup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]
-    toTuple(outtup, V(t1).where(V(s) $= "Ohh"), tx)
+    toTuple(outtup, tupleFrom(V(t1).where(V(s) $= "Ohh")), tx)
     check(outtup.n == 2)
     check(outtup.s == "Ohh")
     check(outtup.b == false)

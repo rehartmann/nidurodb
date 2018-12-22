@@ -1,5 +1,6 @@
 import libduro
 import macros
+import times
 
 type
    Expression* = ref object of RootObj
@@ -475,7 +476,60 @@ proc semiminus*(exp1: Expression, exp2: Expression): Expression =
 proc notMatching*(exp1: Expression, exp2: Expression): Expression =
   result = OpExpression(name: "semiminus", args: @[exp1, exp2])
 
-proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, pExecContext: RDB_exec_context) =
+proc tupleFrom*(exp: Expression): Expression =
+  ## Creates an expression that extracts a single tuple from a table.
+  result = OpExpression(name: "to_tuple", args: @[exp])
+
+proc dateTimeFromDuro(duroval: ptr RDB_object,
+                      tx: Transaction): DateTime =
+  var
+    yearObj: RDB_object
+    monthObj: RDB_object 
+    dayObj: RDB_object
+    hourObj: RDB_object
+    minuteObj: RDB_object
+    secondObj: RDB_object
+  RDB_init_obj(addr(yearObj))
+  RDB_init_obj(addr(monthObj))
+  RDB_init_obj(addr(dayObj))
+  RDB_init_obj(addr(hourObj))
+  RDB_init_obj(addr(minuteObj))
+  RDB_init_obj(addr(secondObj))
+
+  try:
+    if RDB_obj_property(duroval, cstring("year"), addr(yearObj), nil,
+                      addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
+      raiseDuroError(addr(tx.database.context.execContext))
+    if RDB_obj_property(duroval, cstring("month"), addr(monthObj), nil,
+                      addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
+      raiseDuroError(addr(tx.database.context.execContext))
+    if RDB_obj_property(duroval, cstring("day"), addr(dayObj), nil,
+                      addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
+      raiseDuroError(addr(tx.database.context.execContext))
+    if RDB_obj_property(duroval, cstring("hour"), addr(hourObj), nil,
+                      addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
+      raiseDuroError(addr(tx.database.context.execContext))
+    if RDB_obj_property(duroval, cstring("minute"), addr(minuteObj), nil,
+                      addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
+      raiseDuroError(addr(tx.database.context.execContext))
+    if RDB_obj_property(duroval, cstring("second"), addr(secondObj), nil,
+                      addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
+      raiseDuroError(addr(tx.database.context.execContext))
+    result = DateTime(year: int(RDB_obj_int(addr(yearObj))),
+                      month: Month(RDB_obj_int(addr(monthObj))),
+                      monthday: MonthdayRange(RDB_obj_int(addr(dayObj))),
+                      hour: HourRange(RDB_obj_int(addr(hourObj))),
+                      minute: MinuteRange(RDB_obj_int(addr(minuteObj))),
+                      second: SecondRange(RDB_obj_int(addr(secondObj))))
+  finally:
+    RDB_destroy_obj(addr(yearObj), addr(execContext))
+    RDB_destroy_obj(addr(monthObj), addr(execContext))
+    RDB_destroy_obj(addr(dayObj), addr(execContext))
+    RDB_destroy_obj(addr(hourObj), addr(execContext))
+    RDB_destroy_obj(addr(minuteObj), addr(execContext))
+    RDB_destroy_obj(addr(secondObj), addr(execContext))
+
+proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, tx: Transaction) =
   for name, value in fieldPairs(t):
     let duroval = RDB_tuple_get(durotup, cstring(name))
     if duroval == nil:
@@ -505,12 +559,17 @@ proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, pExecContext: RDB_exec_
         raise newException(ValueError, "not a binary")
       var bp: ptr byte
       let len = RDB_binary_length(duroval)
-      if RDB_binary_get(duroval, 0, len, pExecContext, addr(bp), nil) != RDB_OK:
-        raiseDuroError(pExecContext)
+      if RDB_binary_get(duroval, 0, len, addr(tx.database.context.execContext),
+                        addr(bp), nil) != RDB_OK:
+        raiseDuroError(addr(tx.database.context.execContext))
       newSeq(value, len)
       copyMem(addr(value[0]), bp, len)
     elif value is tuple:
-      tupleFromDuro(value, duroval, pExecContext)
+      if RDB_is_tuple(duroval) == cchar(0):
+        raise newException(ValueError, "not a tuple")
+      tupleFromDuro(value, duroval, tx)
+    elif value is DateTime:
+      value = dateTimeFromDuro(duroval, tx)
     else:
       raise newException(ValueError, "value not supported")
 
@@ -560,17 +619,6 @@ method toDuroExpression(exp: ByteSeqExpression, pExecContext: RDB_exec_context):
   if RDB_binary_set(RDB_expr_obj(result), csize(0), addr(exp.value[0]),
                     csize(exp.value.len), pExecContext) != RDB_OK:
     raiseDuroError(pExecContext)
-
-proc extractTuple[T](t: var T, tb: pointer, tx: Transaction) =
-  var obj: RDB_object
-  RDB_init_obj(addr(obj))
-  let res = RDB_extract_tuple(tb, addr(tx.database.context.execContext),
-                           addr(tx.tx), addr(obj))
-  if res != 0:
-    discard RDB_destroy_obj(addr(obj), addr(tx.database.context.execContext))
-    raiseDuroError(addr(tx.database.context.execContext))
-  tupleFromDuro(t, addr(obj), addr(tx.database.context.execContext))
-  discard RDB_destroy_obj(addr(obj), addr(tx.database.context.execContext))
 
 proc toBool*(exp: Expression, tx: Transaction): bool =
   ## Evaluates an expression to int.
@@ -644,28 +692,21 @@ proc toString*(exp: Expression, tx: Transaction): string =
     RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
 proc toTuple*[T](t: var T, exp: Expression, tx: Transaction) =
-  ## Extracts a single tuple from a table.
-  ## Raises an error if the table is empty or if it contains more than one tuple.
-  if exp of VarExpression:
-    let tb = RDB_get_table(cstring(VarExpression(exp).name),
-                           addr(tx.database.context.execContext),
-                           addr(tx.tx))
-    if tb == nil:
-      raise newException(KeyError, "table " & VarExpression(exp).name & " not found")
-    extractTuple(t, tb, tx)
-  else:
-    var dexp = toDuroExpression(exp, addr(tx.database.context.execContext))
-    var tbobj: RDB_object
-    RDB_init_obj(addr(tbobj))
-    try:
-      if RDB_evaluate(dexp, pointer(nil), pointer(nil), tx.database.context.pEnv,
-                      addr(tx.database.context.execContext), addr(tx.tx),
-                      addr(tbobj)) != 0:
-        raiseDuroError(addr(tx.database.context.execContext))
-      extractTuple(t, addr(tbobj), tx)
-    finally:
-      discard RDB_destroy_obj(addr(tbobj), addr(tx.database.context.execContext))
-      RDB_del_expr(dexp, addr(tx.database.context.execContext))
+  ## Converts an expression to a tuple.
+  var dexp = toDuroExpression(exp, addr(tx.database.context.execContext))
+  var obj: RDB_object
+  RDB_init_obj(addr(obj))
+  try:
+    if RDB_evaluate(dexp, pointer(nil), pointer(nil), tx.database.context.pEnv,
+                    addr(tx.database.context.execContext), addr(tx.tx),
+                    addr(obj)) != 0:
+      raiseDuroError(addr(tx.database.context.execContext))
+    if RDB_is_tuple(addr(obj)) == cchar(0):
+      raise newException(ValueError, "not a tuple")
+    tupleFromDuro(t, addr(obj), tx)
+  finally:
+    discard RDB_destroy_obj(addr(obj), addr(tx.database.context.execContext))
+    RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
 type
   Direction* = enum asc, desc
@@ -690,8 +731,8 @@ proc toSeq[T](s: var seq[T], tb: ptr RDB_object, tx: Transaction, order: varargs
     s = @[]
     var t: T
     for i in 0..<RDB_array_length(addr(arr), addr(tx.database.context.execContext)):
-      tupleFromDuro(t, RDB_array_get(addr(arr), i, addr(tx.database.context.execContext)),
-                    addr(tx.database.context.execContext))
+      tupleFromDuro(t, RDB_array_get(addr(arr), cint(i), addr(tx.database.context.execContext)),
+                    tx)
       s.add(t)
   finally:
     RDB_destroy_obj(addr(arr), addr(tx.database.context.execContext))
@@ -719,6 +760,41 @@ proc load*[T](s: var seq[T], exp: Expression, tx: Transaction, order: varargs[Se
     finally:
       RDB_destroy_obj(addr(tbobj), addr(tx.database.context.execContext))
       RDB_del_expr(dexp, addr(tx.database.context.execContext))
+
+proc toDuroObj(dest: ptr RDB_object, dt: DateTime) =
+  var
+    yearObj: RDB_object
+    monthObj: RDB_object 
+    dayObj: RDB_object
+    hourObj: RDB_object
+    minuteObj: RDB_object
+    secondObj: RDB_object
+  RDB_init_obj(addr(yearObj))
+  RDB_init_obj(addr(monthObj))
+  RDB_init_obj(addr(dayObj))
+  RDB_init_obj(addr(hourObj))
+  RDB_init_obj(addr(minuteObj))
+  RDB_init_obj(addr(secondObj))
+  RDB_int_to_obj(addr(yearObj), cint(dt.year))
+  RDB_int_to_obj(addr(monthObj), cint(dt.month))
+  RDB_int_to_obj(addr(dayObj), cint(dt.monthday))
+  RDB_int_to_obj(addr(hourObj), cint(dt.hour))
+  RDB_int_to_obj(addr(minuteObj), cint(dt.minute))
+  RDB_int_to_obj(addr(secondObj), cint(dt.second))
+  let selectorArgs = @[addr(yearObj), addr(monthObj), addr(dayObj),
+                       addr(hourObj), addr(minuteObj), addr(secondObj)]  
+  try:
+    if RDB_call_ro_op_by_name(cstring("datetime"),
+                              cint(selectorArgs.len), unsafeAddr(selectorArgs[0]),
+                              addr(execContext), nil, dest) != 0:
+      raiseDuroError(addr(execContext))
+  finally:
+    RDB_destroy_obj(addr(yearObj), addr(execContext))
+    RDB_destroy_obj(addr(monthObj), addr(execContext))
+    RDB_destroy_obj(addr(dayObj), addr(execContext))
+    RDB_destroy_obj(addr(hourObj), addr(execContext))
+    RDB_destroy_obj(addr(minuteObj), addr(execContext))
+    RDB_destroy_obj(addr(secondObj), addr(execContext))
 
 proc toDuroObj[T: tuple](dest: ptr RDB_object, source: T) =
   for name, value in fieldPairs(source):
@@ -750,6 +826,16 @@ proc toDuroObj[T: tuple](dest: ptr RDB_object, source: T) =
           raiseDuroError(addr(execContext))
       finally:
         RDB_destroy_obj(addr(binobj), addr(execContext))
+    elif value is DateTime:
+      var dtobj: RDB_object
+      RDB_init_obj(addr(dtobj))
+      try:
+        toDuroObj(addr(dtobj), value)
+        if RDB_tuple_set(dest, cstring(name), addr(dtobj),
+                        addr(execContext)) != 0:
+          raiseDuroError(addr(execContext))
+      finally:
+        RDB_destroy_obj(addr(dtobj), addr(execContext))
     else:
       raise newException(ValueError, "invalid value")
 

@@ -115,6 +115,9 @@ proc RDB_obj_string*(objp: ptr RDB_object): cstring
 proc RDB_obj_int*(objp: ptr RDB_object): cint
   {.cdecl, dynlib: libduro, importc.}
 
+proc RDB_int_to_obj*(objp: ptr RDB_object, val: cint)
+  {.cdecl, dynlib: libduro, importc.}
+
 proc RDB_obj_float*(objp: ptr RDB_object): cdouble
   {.cdecl, dynlib: libduro, importc.}
 
@@ -214,4 +217,17 @@ proc RDB_multi_assign*(insc: cint, insv: ptr RDB_ma_insert, updc: cint, updv: pt
 
 proc RDB_init_table*(tb: ptr RDB_object, name: cstring, attrc: cint, attrv: ptr RDB_attr,
                    keyc: cint, keyv: pointer, pExecContext: RDB_exec_context): cint
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_call_ro_op_by_name*(name: cstring, argc: cint, argv: ptr ptr RDB_object,
+                            pExecContext: RDB_exec_context, pTx: RDB_transaction,
+                            pRetval: ptr RDB_object): cint
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_is_tuple*(pTpl: ptr RDB_object): cchar
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_obj_property*(pObj: ptr RDB_object, propname: cstring,
+                       pPropVal: ptr RDB_object, pEnv: pointer,
+                       pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
   {.cdecl, dynlib: libduro, importc.}
