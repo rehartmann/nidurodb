@@ -161,6 +161,10 @@ proc RDB_ro_op*(opname: cstring, pExecContext: RDB_exec_context): RDB_expression
 proc RDB_add_arg*(dexp: RDB_expression, arg: RDB_expression)
   {.cdecl, dynlib: libduro, importc.}
 
+proc RDB_expr_property*(arg: RDB_expression, propName: cstring,
+  pExecContext: RDB_exec_context): RDB_expression   
+  {.cdecl, dynlib: libduro, importc.}
+
 proc RDB_evaluate*(exp: RDB_expression, getfnp: pointer, getdata: pointer, env: pointer,
   pExecContext: RDB_exec_context, pTx: RDB_transaction, val: pointer): cint
   {.cdecl, dynlib: libduro, importc.}

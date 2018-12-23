@@ -1437,6 +1437,8 @@ function main() {
     title="project(exp: Expression; attrs: varargs[string]): Expression"><wbr />project<span class="attachedType" style="visibility:hidden">Expression</span></a></li>
   <li><a class="reference" href="#renameExpr,Expression,varargs[string]"
     title="renameExpr(exp: Expression; renamings: varargs[string]): Expression"><wbr />rename<wbr />Expr<span class="attachedType" style="visibility:hidden">Expression</span></a></li>
+  <li><a class="reference" href="#propExpr,Expression,string"
+    title="propExpr(exp: Expression; prop: string): Expression"><wbr />prop<wbr />Expr<span class="attachedType" style="visibility:hidden">Expression</span></a></li>
   <li><a class="reference" href="#toExpr,bool"
     title="toExpr(b: bool): Expression"><wbr />to<wbr />Expr<span class="attachedType" style="visibility:hidden">Expression</span></a></li>
   <li><a class="reference" href="#toExpr,int"
@@ -1524,6 +1526,8 @@ function main() {
     title="`{}`(exp: Expression; attrs: varargs[untyped]): untyped"><wbr />`{}`<span class="attachedType" style="visibility:hidden">Expression</span></a></li>
   <li><a class="reference" href="#rename.m,Expression,varargs[untyped]"
     title="rename(exp: Expression; renamings: varargs[untyped]): untyped"><wbr />rename<span class="attachedType" style="visibility:hidden">Expression</span></a></li>
+  <li><a class="reference" href="#$..m,Expression,untyped"
+    title="`$.`(exp: Expression; prop: untyped): Expression"><wbr />`$.`<span class="attachedType" style="visibility:hidden">Expression</span></a></li>
   <li><a class="reference" href="#extend.m,Expression,varargs[untyped]"
     title="extend(exp: Expression; assigns: varargs[untyped]): untyped"><wbr />extend<span class="attachedType" style="visibility:hidden">Expression</span></a></li>
   <li><a class="reference" href="#summarize.m,Expression,Expression,varargs[untyped]"
@@ -1987,6 +1991,11 @@ Creates a cast_as_string expression
 
 
 </dd>
+<dt id="propExpr"><a name="propExpr,Expression,string"></a><pre><span class="Keyword">proc</span> <span class="Identifier">propExpr</span><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <a href="duro.html#Expression"><span class="Identifier">Expression</span></a><span class="Other">;</span> <span class="Identifier">prop</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="duro.html#Expression"><span class="Identifier">Expression</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
+<dd>
+
+
+</dd>
 <dt id="toExpr"><a name="toExpr,bool"></a><pre><span class="Keyword">proc</span> <span class="Identifier">toExpr</span><span class="Other">(</span><span class="Identifier">b</span><span class="Other">:</span> <span class="Identifier">bool</span><span class="Other">)</span><span class="Other">:</span> <a href="duro.html#Expression"><span class="Identifier">Expression</span></a> <span><span class="Other">{</span><span class="Other pragmadots">...</span><span class="Other">}</span></span><span class="pragmawrap"><span class="Other">{.</span><span class="pragma"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span><span class="Other">.}</span></span></pre></dt>
 <dd>
 Converts a boolean value to an expression.
@@ -2212,6 +2221,11 @@ Creates a projection expression. Example: V(t){ attr1, attr2 }
 Creates a rename expression. Example: V(t).rename(attr1 as new_attr1, attr2 as new_attr2)
 
 </dd>
+<dt id="$."><a name="$..m,Expression,untyped"></a><pre><span class="Keyword">macro</span> <span class="Identifier">`$.`</span><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <a href="duro.html#Expression"><span class="Identifier">Expression</span></a><span class="Other">;</span> <span class="Identifier">prop</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">)</span><span class="Other">:</span> <a href="duro.html#Expression"><span class="Identifier">Expression</span></a></pre></dt>
+<dd>
+Creates an expression which represents accessing a property
+
+</dd>
 <dt id="extend"><a name="extend.m,Expression,varargs[untyped]"></a><pre><span class="Keyword">macro</span> <span class="Identifier">extend</span><span class="Other">(</span><span class="Identifier">exp</span><span class="Other">:</span> <a href="duro.html#Expression"><span class="Identifier">Expression</span></a><span class="Other">;</span> <span class="Identifier">assigns</span><span class="Other">:</span> <span class="Identifier">varargs</span><span class="Other">[</span><span class="Identifier">untyped</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
 <dd>
 Creates an extend expression. Example: V(t).extend(new_attr1 := &lt;expression&gt;, new_attr2 := &lt;expression&gt;)
@@ -2278,7 +2292,7 @@ Iterates over the children of the NimNode <tt class="docutils literal"><span cla
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small>Made with Nim. Generated: 2018-12-22 10:37:08 UTC</small>
+        <small>Made with Nim. Generated: 2018-12-23 13:21:27 UTC</small>
       </div>
     </div>
   </div>

@@ -27,6 +27,10 @@ type
      name: string
      args: seq[Expression]
 
+   PropertyExpression = ref object of Expression
+     obj: Expression
+     propName: string
+
    DuroError* = object of Exception
 
    DContext* = ref object
@@ -73,16 +77,25 @@ var
   execContext: RDB_exec_contextObj
 
 RDB_init_exec_context(addr(execContext))
-  
-proc raiseDuroError(pExecContext: RDB_exec_context) {.noReturn.} =
+
+proc raiseDuroError(pExecContext: RDB_exec_context, tx: Transaction = nil) {.noReturn.} =
   let err = RDB_get_err(pExecContext)
   let errtyp = RDB_obj_type(err)
   if errtyp != nil:
-    var errmsg = newString(len(RDB_type_name(errtyp)))
-    for i in countup(0, len(errmsg) - 1):
-      errmsg[i] = RDB_type_name(errtyp)[i]
+    var errmsg = $RDB_type_name(errtyp)
+    
+    if tx != nil:
+      var propval: RDB_object
+      if RDB_obj_property(err, cstring("msg"), addr(propval), nil, pExecContext,
+                          addr(tx.tx)) == 0:
+        if RDB_obj_type(addr(propval)) == addr(RDB_STRING):
+          errmsg = errmsg & ": " & $RDB_obj_string(addr(propval))
+    
     raise newException(DuroError, errmsg)
   raise newException(DuroError, "unkown")
+
+proc raiseDuroError(tx: Transaction) {.noReturn.} =
+  raiseDuroError(addr(tx.database.context.execContext), tx)
 
 proc createContext*(path: string, flags: int): DContext =
   ## Creates a DContext from a path and flags.
@@ -362,6 +375,13 @@ macro rename*(exp: Expression, renamings: varargs[untyped]): untyped =
     opargs[i * 2 + 2] = toStrLit(renamings[i][2])
   result = newCall("renameExpr", opargs)
 
+proc propExpr*(exp: Expression, prop: string): Expression =
+  result = PropertyExpression(obj: exp, propName: prop)
+
+macro `$.`*(exp: Expression, prop: untyped): Expression =
+  ## Creates an expression which represents accessing a property
+  result = newCall("propExpr", exp, toStrLit(prop))
+
 proc toExpr*(b: bool): Expression =
   ## Converts a boolean value to an expression.
   return BoolExpression(value: b)
@@ -499,22 +519,22 @@ proc dateTimeFromDuro(duroval: ptr RDB_object,
   try:
     if RDB_obj_property(duroval, cstring("year"), addr(yearObj), nil,
                       addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_property(duroval, cstring("month"), addr(monthObj), nil,
                       addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_property(duroval, cstring("day"), addr(dayObj), nil,
                       addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_property(duroval, cstring("hour"), addr(hourObj), nil,
                       addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_property(duroval, cstring("minute"), addr(minuteObj), nil,
                       addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_property(duroval, cstring("second"), addr(secondObj), nil,
                       addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     result = DateTime(year: int(RDB_obj_int(addr(yearObj))),
                       month: Month(RDB_obj_int(addr(monthObj))),
                       monthday: MonthdayRange(RDB_obj_int(addr(dayObj))),
@@ -542,10 +562,7 @@ proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, tx: Transaction) =
     elif value is string:
       if typ != addr(RDB_STRING):
         raise newException(ValueError, "not a string")
-      var cstr = RDB_obj_string(duroval);
-      value = newString(len(cstr))
-      for i in countup(0, len(value) - 1):
-        value[i] = cstr[i]
+      value = $RDB_obj_string(duroval)
     elif value is int:
       if typ != addr(RDB_INTEGER):
          raise newException(ValueError, "not an integer")
@@ -561,7 +578,7 @@ proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, tx: Transaction) =
       let len = RDB_binary_length(duroval)
       if RDB_binary_get(duroval, 0, len, addr(tx.database.context.execContext),
                         addr(bp), nil) != RDB_OK:
-        raiseDuroError(addr(tx.database.context.execContext))
+        raiseDuroError(tx)
       newSeq(value, len)
       copyMem(addr(value[0]), bp, len)
     elif value is tuple:
@@ -620,6 +637,12 @@ method toDuroExpression(exp: ByteSeqExpression, pExecContext: RDB_exec_context):
                     csize(exp.value.len), pExecContext) != RDB_OK:
     raiseDuroError(pExecContext)
 
+method toDuroExpression(exp: PropertyExpression, pExecContext: RDB_exec_context): RDB_expression =
+  result = RDB_expr_property(toDuroExpression(exp.obj, pExecContext), cstring(exp.propName),
+                             pExecContext);
+  if result == nil:
+    raiseDuroError(pExecContext)
+
 proc toBool*(exp: Expression, tx: Transaction): bool =
   ## Evaluates an expression to int.
   var dexp = toDuroExpression(exp, addr(tx.database.context.execContext))
@@ -629,7 +652,7 @@ proc toBool*(exp: Expression, tx: Transaction): bool =
     if RDB_evaluate(dexp, pointer(nil), pointer(nil), tx.database.context.pEnv,
                     addr(tx.database.context.execContext), addr(tx.tx),
                     addr(dobj)) != 0:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_type(addr(dobj)) != addr(RDB_INTEGER):
       raise newException(ValueError, "not an integer")
     result = bool(RDB_obj_bool(addr(dobj)))
@@ -646,7 +669,7 @@ proc toInt*(exp: Expression, tx: Transaction): int =
     if RDB_evaluate(dexp, pointer(nil), pointer(nil), tx.database.context.pEnv,
                     addr(tx.database.context.execContext), addr(tx.tx),
                     addr(dobj)) != 0:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_type(addr(dobj)) != addr(RDB_INTEGER):
       raise newException(ValueError, "not an integer")
     result = int(RDB_obj_int(addr(dobj)))
@@ -663,7 +686,7 @@ proc toFloat*(exp: Expression, tx: Transaction): float =
     if RDB_evaluate(dexp, pointer(nil), pointer(nil), tx.database.context.pEnv,
                     addr(tx.database.context.execContext), addr(tx.tx),
                     addr(dobj)) != 0:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_type(addr(dobj)) != addr(RDB_FLOAT):
       raise newException(ValueError, "not a float")
     result = float(RDB_obj_float(addr(dobj)))
@@ -680,7 +703,7 @@ proc toString*(exp: Expression, tx: Transaction): string =
     if RDB_evaluate(dexp, pointer(nil), pointer(nil), tx.database.context.pEnv,
                     addr(tx.database.context.execContext), addr(tx.tx),
                     addr(dobj)) != 0:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_obj_type(addr(dobj)) != addr(RDB_STRING):
       raise newException(ValueError, "not a float")
     let csresult = RDB_obj_string(addr(dobj))
@@ -700,7 +723,7 @@ proc toTuple*[T](t: var T, exp: Expression, tx: Transaction) =
     if RDB_evaluate(dexp, pointer(nil), pointer(nil), tx.database.context.pEnv,
                     addr(tx.database.context.execContext), addr(tx.tx),
                     addr(obj)) != 0:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     if RDB_is_tuple(addr(obj)) == cchar(0):
       raise newException(ValueError, "not a tuple")
     tupleFromDuro(t, addr(obj), tx)
@@ -727,7 +750,7 @@ proc toSeq[T](s: var seq[T], tb: ptr RDB_object, tx: Transaction, order: varargs
                           cint(0),
                           addr(tx.database.context.execContext),
                           addr(tx.tx)) != 0:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     s = @[]
     var t: T
     for i in 0..<RDB_array_length(addr(arr), addr(tx.database.context.execContext)):
@@ -755,7 +778,7 @@ proc load*[T](s: var seq[T], exp: Expression, tx: Transaction, order: varargs[Se
                     addr(tx.database.context.execContext), addr(tx.tx),
                     addr(tbobj)) != 0:
         RDB_destroy_obj(addr(tbobj), addr(tx.database.context.execContext))
-        raiseDuroError(addr(tx.database.context.execContext))
+        raiseDuroError(tx)
       toSeq(s, addr(tbobj), tx, order)
     finally:
       RDB_destroy_obj(addr(tbobj), addr(tx.database.context.execContext))
@@ -889,7 +912,7 @@ proc insertS*[T](tbName: string, t: T, tx: Transaction) =
   try:
     if RDB_insert(tb, addr(obj), addr(tx.database.context.execContext),
                 addr(tx.tx)) != 0:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
   finally:
     RDB_destroy_obj(addr(obj), addr(tx.database.context.execContext))
 
@@ -909,7 +932,7 @@ proc deleteS*(tbName: string, cond: Expression, tx: Transaction): int {.discarda
   result = RDB_delete(tb, dcond, addr(tx.database.context.execContext), addr(tx.tx));
   RDB_del_expr(dcond, addr(tx.database.context.execContext))
   if result < 0:
-    raiseDuroError(addr(tx.database.context.execContext))
+    raiseDuroError(tx)
 
 macro delete*(dest: untyped, cond:Expression, tx: Transaction): int {.discardable.} =
   result = newCall("deleteS", toStrLit(dest), cond, tx)
@@ -931,14 +954,14 @@ proc updateS*(tbName: string, cond: Expression, tx: Transaction,
       updates[i].name = cstring(StringExpression(updexprs[i * 2 + 1]).value)
       updates[i].exp = toDuroExpression(updexprs[i * 2], addr(tx.database.context.execContext))
       if updates[i].exp == nil:
-        raiseDuroError(addr(tx.database.context.execContext))
+        raiseDuroError(tx)
     dcond = toDuroExpression(cond, addr(tx.database.context.execContext))
     if dcond == nil:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
     result = RDB_update(tb, dcond, cint(updates.len), addr(updates[0]),
                         addr(tx.database.context.execContext), addr(tx.tx));
     if result < 0:
-      raiseDuroError(addr(tx.database.context.execContext))
+      raiseDuroError(tx)
   finally:
     if dcond != nil:
       RDB_del_expr(dcond, addr(tx.database.context.execContext))

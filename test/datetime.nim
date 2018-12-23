@@ -51,5 +51,18 @@ suite "datetime":
     check(tup.d.minute == testMinute)
     check(tup.d.second == testSecond)
 
+    toTuple(tup, tupleFrom(V(td).where(V(d)$.year $= testYear)), tx)
+    check(tup.d.year == testYear)
+    check(tup.d.month == testMonth)
+    check(tup.d.monthday == testDay)
+    check(tup.d.hour == testHour)
+    check(tup.d.minute == testMinute)
+    check(tup.d.second == testSecond)
+
+    var
+      s: seq[tuple[n: int, d: DateTime]]
+    load(s, V(td).where(V(d)$.year $= 1900), tx)
+    check(s.len == 0)
+
     tx.commit
     dc.closeContext
