@@ -43,7 +43,7 @@ suite "datetime":
 
     var
       tup = (n: 0, d: DateTime(year: 2018, month: mJan, monthday: 1))
-    toTuple(tup, tupleFrom(V(td)), tx)
+    toTuple(tup, tupleFrom(@@td), tx)
     check(tup.d.year == testYear)
     check(tup.d.month == testMonth)
     check(tup.d.monthday == testDay)
@@ -51,7 +51,7 @@ suite "datetime":
     check(tup.d.minute == testMinute)
     check(tup.d.second == testSecond)
 
-    toTuple(tup, tupleFrom(V(td).where(V(d)$.year $= testYear)), tx)
+    toTuple(tup, tupleFrom(@@td.where(@@d$.year $= testYear)), tx)
     check(tup.d.year == testYear)
     check(tup.d.month == testMonth)
     check(tup.d.monthday == testDay)
@@ -61,7 +61,7 @@ suite "datetime":
 
     var
       s: seq[tuple[n: int, d: DateTime]]
-    load(s, V(td).where(V(d)$.year $= 1900), tx)
+    load(s, @@td.where(@@d$.year $= 1900), tx)
     check(s.len == 0)
 
     tx.commit

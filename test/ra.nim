@@ -38,7 +38,7 @@ suite "relational algrebra":
 
     var
       s: seq[tuple[n: int, s: string]]
-    load(s, V(t1){ n, s }, tx, SeqItem(attr: "n", dir: asc))
+    load(s, @@t1{ n, s }, tx, SeqItem(attr: "n", dir: asc))
     check(s[0].n == 1)
     check(s[0].s == "Ui")
     check(s[1].n == 2)
@@ -46,7 +46,7 @@ suite "relational algrebra":
 
     var
       outtup: tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]
-    toTuple(outtup, tupleFrom(V(t1).where(V(s) $= "Ohh")), tx)
+    toTuple(outtup, tupleFrom(@@t1.where(@@s $= "Ohh")), tx)
     check(outtup.n == 2)
     check(outtup.s == "Ohh")
     check(outtup.b == false)
@@ -68,7 +68,7 @@ suite "relational algrebra":
     var
       s: seq[tuple[n: int, s: string, f: float, b: bool, bn: seq[byte]]]
 
-    load(s, V(t1).union(V(t2)), tx, SeqItem(attr: "n", dir: asc))
+    load(s, @@t1.union(@@t2), tx, SeqItem(attr: "n", dir: asc))
     check(s.len == 2)
     check(s[0].n == 1)
     check(s[0].s == "Ui")
@@ -81,20 +81,20 @@ suite "relational algrebra":
     check(s[1].b == false)
     check(s[1].bn == @[byte(1), byte(2)])
 
-    load(s, V(t1).minus(V(t2)), tx, SeqItem(attr: "n", dir: asc))
+    load(s, @@t1.minus(@@t2), tx, SeqItem(attr: "n", dir: asc))
     check(s.len == 1)
     check(s[0].n == 2)
     check(s[0].s == "ohh")
 
-    load(s, V(t1).intersect(V(t2)), tx, SeqItem(attr: "n", dir: asc))
+    load(s, @@t1.intersect(@@t2), tx, SeqItem(attr: "n", dir: asc))
     check(s.len == 1)
     check(s[0].n == 1)
     check(s[0].s == "Ui")
 
     expect DuroError:
-      load(s, V(t1).dUnion(V(t2)), tx, SeqItem(attr: "n", dir: asc))
+      load(s, @@t1.dUnion(@@t2), tx, SeqItem(attr: "n", dir: asc))
 
-    load(s, V(t1).where(V(n) $= 2).dUnion(V(t2)), tx, SeqItem(attr: "n", dir: asc))
+    load(s, @@t1.where(@@n $= 2).dUnion(@@t2), tx, SeqItem(attr: "n", dir: asc))
     check(s.len == 2)
     check(s[0].n == 1)
     check(s[0].s == "Ui")
@@ -117,7 +117,7 @@ suite "relational algrebra":
     var
       s: seq[tuple[n: int, s: string, f: float, b: bool, bn: seq[byte], m: int, s3: string]]
 
-    load(s, V(t1).join(V(t3).rename(k as n, s as s3)), tx, SeqItem(attr: "n", dir: asc))
+    load(s, @@t1.join(@@t3.rename(k as n, s as s3)), tx, SeqItem(attr: "n", dir: asc))
     check(s.len == 2)
     check(s[0].n == 1)
     check(s[0].s == "Ui")
@@ -147,7 +147,7 @@ suite "relational algrebra":
     var
       s: seq[tuple[n: int, s: string, f: float, b: bool, bn: seq[byte], nx: int, sx: string]]
 
-    load(s, V(t1).extend(nx := V(n) * 2, sx := V(s) || "x"), tx)
+    load(s, @@t1.extend(nx := @@n * 2, sx := @@s || "x"), tx)
     check(s[0].n == 1)
     check(s[0].s == "Ui")
     check(s[0].f == 1.5)
@@ -163,7 +163,7 @@ suite "relational algrebra":
     var
       s2: seq[tuple[k: int, mc: int, ms: int]]
     
-    load(s2, V(t3).summarize(V(t3){ k }, mc := count(V(m)), ms := sum(V(m))), tx)
+    load(s2, @@t3.summarize(@@t3{ k }, mc := count(@@m), ms := sum(@@m)), tx)
     check(s2.len == 2)
     check(s2[0].k == 1)
     check(s2[0].mc == 2)
@@ -182,7 +182,7 @@ suite "relational algrebra":
 
     duro.insert(t1, (n: 1, s: "Ui", f: 1.5, b: true, bn: @[byte(255)]), tx)
 
-    check(toInt(count(V(t1)), tx) == 1)
+    check(toInt(count(@@t1), tx) == 1)
     check(toFloat(toExpr(1.0), tx) == 1.0)
     check(toString(toExpr("x"), tx) == "x")
 

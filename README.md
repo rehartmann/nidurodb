@@ -15,7 +15,7 @@ where a > 1000;
 is equivalent to the following code in Nidurodb:
 
 ```
-V(t).where(V(a) $> 1000){a, b}.rename(a as x, b as y)
+@@t.where(@@a $> 1000){a, b}.rename(a as x, b as y)
 ```
 
 Loading the result into a sequence:
@@ -23,7 +23,7 @@ Loading the result into a sequence:
 ```
 var
   s: seq[tuple[x: int, y: int]]
-load(s, V(t).where(V(a) $> 1000){a, b}.rename(a as x, b as y), tx)
+load(s, @@t.where(@@a $> 1000){a, b}.rename(a as x, b as y), tx)
 ```
 
 DuroDBMS is based on the principles laid down in the book *Databases, Types, and the Relational Model: The Third Manifesto* by C. J. Date and Hugh Darwen.

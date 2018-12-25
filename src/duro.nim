@@ -144,6 +144,10 @@ proc rollback*(tx: Transaction) =
 proc toVar*(varname: string): VarExpression =
   result = VarExpression(name: varname)
 
+macro `@@`*(varname: untyped): Expression =
+  ## Converts an identifier to a variable name.
+  result = newCall("toVar", @[toStrLit(varname)])
+
 macro V*(varname: untyped): Expression =
   ## Converts an identifier to a variable name.
   result = newCall("toVar", @[toStrLit(varname)])
