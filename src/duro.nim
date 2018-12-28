@@ -553,46 +553,64 @@ proc dateTimeFromDuro(duroval: ptr RDB_object,
     RDB_destroy_obj(addr(minuteObj), addr(execContext))
     RDB_destroy_obj(addr(secondObj), addr(execContext))
 
+proc fromDuro[T](value: var T, duroObj: ptr RDB_object, tx: Transaction)
+
+proc tupleFromDuroPossreps[T](t: var T, duroObj: ptr RDB_object, tx: Transaction) =
+  for name, value in fieldPairs(t):
+    var
+      prop: RDB_object
+    RDB_init_obj(addr(prop))
+    if RDB_obj_property(duroObj, cstring(name), addr(prop), nil,
+                        addr(tx.database.context.execContext), addr(tx.tx)) != RDB_OK:
+      RDB_destroy_obj(addr(prop), addr(tx.database.context.execContext))
+      raise newException(ValueError, "property " & name & " not found")
+    fromDuro(value, addr(prop), tx)
+    RDB_destroy_obj(addr(prop), addr(tx.database.context.execContext))
+
 proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, tx: Transaction) =
   for name, value in fieldPairs(t):
-    let duroval = RDB_tuple_get(durotup, cstring(name))
-    if duroval == nil:
+    let pDuroval = RDB_tuple_get(durotup, cstring(name))
+    if pDuroval == nil:
        raise newException(KeyError, "attribute " & name & " not found")
-    let typ = RDB_obj_type(duroval)
-    when value is bool:
-      if typ != addr(RDB_BOOLEAN):
-        raise newException(ValueError, "not a boolean")
-      value = bool(RDB_obj_bool(duroval))
-    elif value is string:
-      if typ != addr(RDB_STRING):
-        raise newException(ValueError, "not a string")
-      value = $RDB_obj_string(duroval)
-    elif value is int:
-      if typ != addr(RDB_INTEGER):
-         raise newException(ValueError, "not an integer")
-      value = int(RDB_obj_int(duroval))
-    elif value is float:
-      if typ != addr(RDB_FLOAT):
-        raise newException(ValueError, "not a float")
-      value = float(RDB_obj_float(duroval))
-    elif value is seq[byte]:
-      if typ != addr(RDB_BINARY):
-        raise newException(ValueError, "not a binary")
-      var bp: ptr byte
-      let len = RDB_binary_length(duroval)
-      if RDB_binary_get(duroval, 0, len, addr(tx.database.context.execContext),
-                        addr(bp), nil) != RDB_OK:
-        raiseDuroError(tx)
-      newSeq(value, len)
-      copyMem(addr(value[0]), bp, len)
-    elif value is tuple:
-      if RDB_is_tuple(duroval) == cchar(0):
-        raise newException(ValueError, "not a tuple")
-      tupleFromDuro(value, duroval, tx)
-    elif value is DateTime:
-      value = dateTimeFromDuro(duroval, tx)
+    fromDuro(value, pDuroval, tx)
+
+proc fromDuro[T](value: var T, duroObj: ptr RDB_object, tx: Transaction) =
+  let typ = RDB_obj_type(duroObj)
+  when value is bool:
+    if typ != addr(RDB_BOOLEAN):
+      raise newException(ValueError, "not a boolean")
+    value = bool(RDB_obj_bool(duroObj))
+  elif value is string:
+    if typ != addr(RDB_STRING):
+      raise newException(ValueError, "not a string")
+    value = $RDB_obj_string(duroObj)
+  elif value is int:
+    if typ != addr(RDB_INTEGER):
+      raise newException(ValueError, "not an integer")
+    value = int(RDB_obj_int(duroObj))
+  elif value is float:
+    if typ != addr(RDB_FLOAT):
+      raise newException(ValueError, "not a float")
+    value = float(RDB_obj_float(duroObj))
+  elif value is seq[byte]:
+    if typ != addr(RDB_BINARY):
+      raise newException(ValueError, "not a binary")
+    var bp: ptr byte
+    let len = RDB_binary_length(duroObj)
+    if RDB_binary_get(duroObj, 0, len, addr(tx.database.context.execContext),
+                      addr(bp), nil) != RDB_OK:
+      raiseDuroError(tx)
+    newSeq(value, len)
+    copyMem(addr(value[0]), bp, len)
+  elif value is tuple:
+    if RDB_is_tuple(duroObj) == cchar(0):
+      tupleFromDuroPossreps(value, duroObj, tx)
     else:
-      raise newException(ValueError, "value not supported")
+      tupleFromDuro(value, duroObj, tx)
+  elif value is DateTime:
+    value = dateTimeFromDuro(duroObj, tx)
+  else:
+    raise newException(ValueError, "value not supported")
 
 method toDuroExpression(exp: Expression, pExecContext: RDB_exec_context): RDB_expression {.base.} = nil
 
