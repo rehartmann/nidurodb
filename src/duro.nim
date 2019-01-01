@@ -881,6 +881,16 @@ proc toDuroObj[T: tuple](dest: ptr RDB_object, source: T) =
           raiseDuroError(addr(execContext))
       finally:
         RDB_destroy_obj(addr(dtobj), addr(execContext))
+    elif value is tuple:
+      var tpobj: RDB_object
+      RDB_init_obj(addr(tpobj))
+      try:
+        toDuroObj(addr(tpobj), value)
+        if RDB_tuple_set(dest, cstring(name), addr(tpobj),
+                        addr(execContext)) != 0:
+          raiseDuroError(addr(execContext))
+      finally:
+        RDB_destroy_obj(addr(tpobj), addr(execContext))
     else:
       raise newException(ValueError, "invalid value")
 
