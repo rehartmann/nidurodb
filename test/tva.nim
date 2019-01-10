@@ -15,6 +15,7 @@ suite "tuple-valued attributes":
                       "current_db := 'D';" &
                       "begin tx;" &
                       "var t1 real rel {n int, tp tuple {a int, b string} } key{n};" &
+                      "var t2 real rel {n int, m int, s string, f float} key{n};" &
                       "commit;\"" &
                       "| durodt")
     require(errC == 0)
@@ -48,6 +49,51 @@ suite "tuple-valued attributes":
     check(s[0].n == 1)
     check(s[0].tp.a == 5)
     check(s[0].tp.b == "s")
+
+    tx.commit
+    dc.closeContext
+
+  test "wrap":
+    let dc = createContext("dbenv", 0)
+    require(dc != nil)
+    let
+      tx = dc.getDatabase("D").begin
+
+    duro.insert(t2, (n: 1, m: 5, s: "foo", f: 5.0), tx)
+
+    var
+      t: tuple[n: int, tp: tuple[m: int, s: string, f: float]]
+    
+    toTuple(t, tupleFrom(@@t2.wrap({m, s, f} as tp)), tx)
+
+    check(t.n == 1)
+    check(t.tp.m == 5)
+    check(t.tp.s == "foo")
+    check(t.tp.f == 5.0)
+
+    tx.commit
+    dc.closeContext
+
+  test "unwrap":
+    let dc = createContext("dbenv", 0)
+    require(dc != nil)
+    let
+      tx = dc.getDatabase("D").begin
+    require(tx != nil)
+
+    duro.insert(t1, (n: 5, tp: (a: 76, b: "bee")), tx)
+
+    var
+      t: tuple[n: int, a: int, b: string]
+    
+    let exp = tupleFrom(@@t1.unwrap(tp));
+    check(exp != nil)
+
+    toTuple(t, exp, tx)
+
+    check(t.n == 5)
+    check(t.a == 76)
+    check(t.b == "bee")
 
     tx.commit
     dc.closeContext

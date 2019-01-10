@@ -121,6 +121,9 @@ proc RDB_int_to_obj*(objp: ptr RDB_object, val: cint)
 proc RDB_obj_float*(objp: ptr RDB_object): cdouble
   {.cdecl, dynlib: libduro, importc.}
 
+proc RDB_string_to_obj*(objp: ptr RDB_object, str: cstring, pExecContext: RDB_exec_context): cint
+  {.cdecl, dynlib: libduro, importc.}
+
 proc RDB_obj_type*(objp: ptr RDB_object): pointer
   {.cdecl, dynlib: libduro, importc.}
 
@@ -234,4 +237,13 @@ proc RDB_is_tuple*(pTpl: ptr RDB_object): cchar
 proc RDB_obj_property*(pObj: ptr RDB_object, propname: cstring,
                        pPropVal: ptr RDB_object, pEnv: pointer,
                        pExecContext: RDB_exec_context, pTx: RDB_transaction): cint
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_set_array_length*(pObj: ptr RDB_object, len: cint, pExecContext: RDB_exec_context): cint
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_new_array_type*(basetyp: pointer, pExecContext: RDB_exec_context): pointer
+  {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_set_expr_type*(exp: RDB_expression, typ: pointer)
   {.cdecl, dynlib: libduro, importc.}

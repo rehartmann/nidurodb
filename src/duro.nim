@@ -6,22 +6,25 @@ type
    Expression* = ref object of RootObj
 
    VarExpression = ref object of Expression
-      name: string
+     name: string
 
    BoolExpression = ref object of Expression
-      value: bool
+     value: bool
 
    StringExpression = ref object of Expression
-      value: string
+     value: string
 
    IntExpression = ref object of Expression
-      value: int
+     value: int
 
    FloatExpression = ref object of Expression
-      value: float
+     value: float
 
    ByteSeqExpression = ref object of Expression
-      value: seq[byte]
+     value: seq[byte]
+
+   StringSeqExpression = ref object of Expression
+     value: seq[string]
 
    OpExpression = ref object of Expression
      name: string
@@ -34,16 +37,16 @@ type
    DuroError* = object of Exception
 
    DContext* = ref object
-      pEnv: pointer
-      execContext: RDB_exec_contextObj
+     pEnv: pointer
+     execContext: RDB_exec_contextObj
 
    Database* = ref object
-      pDb: pointer
-      context: DContext
+     pDb: pointer
+     context: DContext
 
    Transaction* = ref object
-      database: Database
-      tx: RDB_transactionObj
+     database: Database
+     tx: RDB_transactionObj
 
    AssignmentKind = enum
      akCopy, akInsert, akUpdate, akDelete, akVDelete
@@ -379,6 +382,46 @@ macro rename*(exp: Expression, renamings: varargs[untyped]): untyped =
     opargs[i * 2 + 2] = toStrLit(renamings[i][2])
   result = newCall("renameExpr", opargs)
 
+proc wrapExpr*(exp: Expression, wrappings: varargs[tuple[fromAttrs: seq[string], toAttr: string]]): Expression =
+  var
+    opargs = @[exp]
+  for wrapping in wrappings:
+    opargs.add(StringSeqExpression(value: wrapping.fromAttrs))
+    opargs.add(StringExpression(value: wrapping.toAttr))
+  result = OpExpression(name: "wrap", args: opargs)
+
+macro wrap*(exp: Expression, wrappings: varargs[untyped]): untyped =
+  ## Creates a WRAP expression.
+  ## Example: V(t).wrap({a, b} as tp)
+  var opargs: seq[NimNode] = @[exp];
+  for i in 0..<len(wrappings):
+    if len(wrappings[i]) != 3:
+      raise newException(ValueError, "invalid wrapping")
+    if toStrLit(wrappings[i][0]).strVal != "as":
+      raise newException(ValueError, "invalid wrapping")
+    var
+      wrapFromAttrs: seq[string] = @[]
+    for wrapFromAttr in wrappings[i][1]:
+      wrapFromAttrs.add(toStrLit(wrapFromAttr).strVal)
+    opargs.add(newLit((fromAttrs: wrapFromAttrs, toAttr: toStrLit(wrappings[i][2]).strVal)))
+  result = newCall("wrapExpr", opargs)
+
+proc unwrapExpr*(exp: Expression, attrs: varargs[string]): Expression =
+  var
+    opargs = newSeq[Expression](len(attrs) + 1);
+  opargs[0] = exp
+  for i in 0..<len(attrs):
+    opargs[i + 1] = StringExpression(value: attrs[i])
+  result = OpExpression(name: "unwrap", args: opargs)
+
+macro unwrap*(exp: Expression, attrs: varargs[untyped]): untyped =
+  ## Creates an UNWRAP expression.
+  var args: seq[NimNode] = newSeq[NimNode](len(attrs) + 1);
+  args[0] = exp
+  for i in 0..<len(attrs):
+    args[i + 1] = toStrLit(attrs[i])
+  result = newCall("unwrapExpr", args)
+
 proc propExpr*(exp: Expression, prop: string): Expression =
   result = PropertyExpression(obj: exp, propName: prop)
 
@@ -639,13 +682,35 @@ method toDuroExpression(exp: FloatExpression, pExecContext: RDB_exec_context): R
   if result == nil:
     raiseDuroError(pExecContext)
 
+method toDuroExpression(exp: StringSeqExpression, pExecContext: RDB_exec_context): RDB_expression =
+  var
+    dArray: RDB_object
+  RDB_init_obj(addr(dArray))
+  try:
+    if RDB_set_array_length(addr(dArray), cint(exp.value.len), pExecContext) != RDB_OK:
+      raiseDuroError(pExecContext)
+    for i in 0..<exp.value.len:
+      if RDB_string_to_obj(RDB_array_get(addr(dArray), cint(i), pExecContext),
+                           cstring(exp.value[i]),
+                           pExecContext) != RDB_OK:
+        raiseDuroError(pExecContext)
+    result = RDB_obj_to_expr(addr(dArray), pExecContext)
+    
+    # Set expression type
+    let expType = RDB_new_array_type(addr(RDB_STRING), pExecContext)
+    if expType == nil:
+      raiseDuroError(pExecContext)
+    RDB_set_expr_type(result, expType)
+    
+  finally:
+    RDB_destroy_obj(addr(dArray), pExecContext)
+
 method toDuroExpression(exp: OpExpression, pExecContext: RDB_exec_context): RDB_expression =
-  let dexp = RDB_ro_op(cstring(exp.name), pExecContext)
-  if dexp == nil:
+  result = RDB_ro_op(cstring(exp.name), pExecContext)
+  if result == nil:
     raiseDuroError(pExecContext)
-  for i in countup(0, len(exp.args)-1):
-    RDB_add_arg(dexp, toDuroExpression(exp.args[i], pExecContext))
-  return dexp
+  for i in 0..<len(exp.args):
+    RDB_add_arg(result, toDuroExpression(exp.args[i], pExecContext))
 
 method toDuroExpression(exp: ByteSeqExpression, pExecContext: RDB_exec_context): RDB_expression =
   var
@@ -744,7 +809,7 @@ proc toTuple*[T](t: var T, exp: Expression, tx: Transaction) =
   try:
     if RDB_evaluate(dexp, pointer(nil), pointer(nil), tx.database.context.pEnv,
                     addr(tx.database.context.execContext), addr(tx.tx),
-                    addr(obj)) != 0:
+                    addr(obj)) != RDB_OK:
       raiseDuroError(tx)
     if RDB_is_tuple(addr(obj)) == cchar(0):
       raise newException(ValueError, "not a tuple")
