@@ -47,6 +47,7 @@ nim -p:../src c -r update.nim
 nim -p:../src c -r ra.nim
 nim -p:../src c -r datetime.nim
 nim -p:../src c -r tva.nim
+nim -p:../src c -r rva.nim
 nim -p:../src c -r possreps.nim
 ```
 

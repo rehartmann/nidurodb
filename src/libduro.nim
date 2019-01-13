@@ -247,3 +247,6 @@ proc RDB_new_array_type*(basetyp: pointer, pExecContext: RDB_exec_context): poin
 
 proc RDB_set_expr_type*(exp: RDB_expression, typ: pointer)
   {.cdecl, dynlib: libduro, importc.}
+
+proc RDB_type_is_relation*(typ: pointer): cchar
+  {.cdecl, dynlib: libduro, importc.}

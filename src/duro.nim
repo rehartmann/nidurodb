@@ -617,6 +617,35 @@ proc tupleFromDuro[T](t: var T, durotup: ptr RDB_object, tx: Transaction) =
        raise newException(KeyError, "attribute " & name & " not found")
     fromDuro(value, pDuroval, tx)
 
+type
+  Direction* = enum asc, desc
+  SeqItem* = object
+    attr*: string
+    dir*: Direction
+
+proc toSeq[T](s: var seq[T], tb: ptr RDB_object, tx: Transaction, order: varargs[SeqItem]) =
+  var orderseq = newSeq[RDB_seq_item](order.len);
+  for i in 0..<order.len:
+    orderseq[i].attrname = cstring(order[i].attr)
+    orderseq[i].asc = cchar(if order[i].dir == asc: 1 else: 0)
+  var arr: RDB_object
+  RDB_init_obj(addr(arr))
+  try:
+    if RDB_table_to_array(addr(arr), tb, cint(order.len),
+                          if order.len > 0: addr(orderseq[0]) else: nil,
+                          cint(0),
+                          addr(tx.database.context.execContext),
+                          addr(tx.tx)) != 0:
+      raiseDuroError(tx)
+    s = @[]
+    var t: T
+    for i in 0..<RDB_array_length(addr(arr), addr(tx.database.context.execContext)):
+      tupleFromDuro(t, RDB_array_get(addr(arr), cint(i), addr(tx.database.context.execContext)),
+                    tx)
+      s.add(t)
+  finally:
+    RDB_destroy_obj(addr(arr), addr(tx.database.context.execContext))
+
 proc fromDuro[T](value: var T, duroObj: ptr RDB_object, tx: Transaction) =
   let typ = RDB_obj_type(duroObj)
   when value is bool:
@@ -650,6 +679,10 @@ proc fromDuro[T](value: var T, duroObj: ptr RDB_object, tx: Transaction) =
       tupleFromDuroPossreps(value, duroObj, tx)
     else:
       tupleFromDuro(value, duroObj, tx)
+  elif value is seq:
+    if (typ == nil) or (RDB_type_is_relation(typ) == cchar(0)):
+      raise newException(ValueError, "not a table")
+    toSeq(value, duroObj, tx)
   elif value is DateTime:
     value = dateTimeFromDuro(duroObj, tx)
   else:
@@ -818,35 +851,6 @@ proc toTuple*[T](t: var T, exp: Expression, tx: Transaction) =
     discard RDB_destroy_obj(addr(obj), addr(tx.database.context.execContext))
     RDB_del_expr(dexp, addr(tx.database.context.execContext))
 
-type
-  Direction* = enum asc, desc
-  SeqItem* = object
-    attr*: string
-    dir*: Direction
-
-proc toSeq[T](s: var seq[T], tb: ptr RDB_object, tx: Transaction, order: varargs[SeqItem]) =
-  var orderseq = newSeq[RDB_seq_item](order.len);
-  for i in 0..<order.len:
-    orderseq[i].attrname = cstring(order[i].attr)
-    orderseq[i].asc = cchar(if order[i].dir == asc: 1 else: 0)
-  var arr: RDB_object
-  RDB_init_obj(addr(arr))
-  try:
-    if RDB_table_to_array(addr(arr), tb, cint(order.len),
-                          if order.len > 0: addr(orderseq[0]) else: nil,
-                          cint(0),
-                          addr(tx.database.context.execContext),
-                          addr(tx.tx)) != 0:
-      raiseDuroError(tx)
-    s = @[]
-    var t: T
-    for i in 0..<RDB_array_length(addr(arr), addr(tx.database.context.execContext)):
-      tupleFromDuro(t, RDB_array_get(addr(arr), cint(i), addr(tx.database.context.execContext)),
-                    tx)
-      s.add(t)
-  finally:
-    RDB_destroy_obj(addr(arr), addr(tx.database.context.execContext))
-
 proc load*[T](s: var seq[T], exp: Expression, tx: Transaction, order: varargs[SeqItem]) =
   ## Copies a relational expression to a sequence.
   if exp of VarExpression:
@@ -906,6 +910,8 @@ proc toDuroObj(dest: ptr RDB_object, dt: DateTime) =
     RDB_destroy_obj(addr(minuteObj), addr(execContext))
     RDB_destroy_obj(addr(secondObj), addr(execContext))
 
+proc toDuroObj[T: tuple](dest: ptr RDB_object, source: seq[T])
+
 proc toDuroObj[T: tuple](dest: ptr RDB_object, source: T) =
   for name, value in fieldPairs(source):
     when value is bool:
@@ -956,6 +962,16 @@ proc toDuroObj[T: tuple](dest: ptr RDB_object, source: T) =
           raiseDuroError(addr(execContext))
       finally:
         RDB_destroy_obj(addr(tpobj), addr(execContext))
+    elif value is seq:
+      var tbobj: RDB_object
+      RDB_init_obj(addr(tbobj))
+      try:
+        toDuroObj(addr(tbobj), value)
+        if RDB_tuple_set(dest, cstring(name), addr(tbobj),
+                        addr(execContext)) != 0:
+          raiseDuroError(addr(execContext))
+      finally:
+        RDB_destroy_obj(addr(tbobj), addr(execContext))
     else:
       raise newException(ValueError, "invalid value")
 
