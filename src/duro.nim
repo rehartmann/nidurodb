@@ -422,6 +422,26 @@ macro unwrap*(exp: Expression, attrs: varargs[untyped]): untyped =
     args[i + 1] = toStrLit(attrs[i])
   result = newCall("unwrapExpr", args)
 
+proc groupExpr*(exp: Expression, grouping: varargs[string]): Expression =
+  var
+    opargs = @[exp]
+  for attr in grouping:
+    opargs.add(StringExpression(value: attr))
+  result = OpExpression(name: "group", args: opargs)
+
+macro group*(exp: Expression, grouping: untyped): untyped =
+  ## Creates a GROUP expression.
+  ## Example: V(t).group({a, b} as r)
+  var opargs: seq[NimNode] = @[exp];
+  if len(grouping) != 3:
+    raise newException(ValueError, "invalid grouping")
+  if toStrLit(grouping[0]).strVal != "as":
+    raise newException(ValueError, "invalid grouping")
+  for groupFromAttr in grouping[1]:
+    opargs.add(toStrLit(groupFromAttr))
+  opargs.add(toStrLit(grouping[2]))
+  result = newCall("groupExpr", opargs)
+
 proc propExpr*(exp: Expression, prop: string): Expression =
   result = PropertyExpression(obj: exp, propName: prop)
 

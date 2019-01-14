@@ -16,6 +16,7 @@ suite "tuple-valued attributes":
                       "current_db := 'D';" &
                       "begin tx;" &
                       "var t1 real rel {n int, r rel {a int, b string} } key{n};" &
+                      "var t2 real rel {n int, a int, b string};" &
                       "commit;\"" &
                       "| durodt")
     require(errC == 0)
@@ -37,6 +38,7 @@ suite "tuple-valued attributes":
     toTuple(t, tupleFrom(@@t1), tx)
 
     check(t.n == 1)
+
     t.r.sort do (t1, t2: tuple[a: int, b: string]) -> int:
       result = cmp(t1.a, t2.a)
 
@@ -48,4 +50,30 @@ suite "tuple-valued attributes":
     tx.commit
     dc.closeContext
 
+  test "group":
+    let dc = createContext("dbenv", 0)
+    require(dc != nil)
+    let
+      tx = dc.getDatabase("D").begin
+
+    duro.insert(t2, (n: 10, a: 2, b: "b"), tx)
+    duro.insert(t2, (n: 10, a: 3, b: "bee"), tx)
+
+    var
+      s: seq[tuple[n: int, r: seq[tuple[a: int, b: string]]]]
     
+    load(s, @@t2.group({a, b} as r), tx)
+    check(len(s) == 1)
+    check(s[0].n == 10)
+
+    s[0].r.sort do (t1, t2: tuple[a: int, b: string]) -> int:
+      result = cmp(t1.a, t2.a)
+
+    check(len(s[0].r) == 2)
+    check(s[0].r[0].a == 2)
+    check(s[0].r[0].b == "b")
+    check(s[0].r[1].a == 3)
+    check(s[0].r[1].b == "bee")
+
+    tx.commit
+    dc.closeContext
