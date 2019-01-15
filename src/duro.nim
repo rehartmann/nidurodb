@@ -442,6 +442,15 @@ macro group*(exp: Expression, grouping: untyped): untyped =
   opargs.add(toStrLit(grouping[2]))
   result = newCall("groupExpr", opargs)
 
+proc ungroupExpr*(exp: Expression, attr: string): Expression =
+  result = OpExpression(name: "ungroup", args: @[exp, StringExpression(value: attr)])
+
+macro ungroup*(exp: Expression, attr: untyped): untyped =
+  ## Creates an UNGROUP expression.
+  ## Example: V(t).ungroup(a)
+  var opargs: seq[NimNode] = @[exp, toStrLit(attr)];
+  result = newCall("ungroupExpr", opargs)
+
 proc propExpr*(exp: Expression, prop: string): Expression =
   result = PropertyExpression(obj: exp, propName: prop)
 

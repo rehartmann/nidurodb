@@ -77,3 +77,24 @@ suite "tuple-valued attributes":
 
     tx.commit
     dc.closeContext
+
+  test "ungroup":
+    let dc = createContext("dbenv", 0)
+    require(dc != nil)
+    let
+      tx = dc.getDatabase("D").begin
+
+    duro.insert(t1, (n: 1, r: @[(a: 7, b: "x"), (a: 17, b: "yz")]), tx)
+
+    var
+      s: seq[tuple[n: int, a: int, b: string]]
+    load(s, @@t1.ungroup(r), tx, SeqItem(attr: "a", dir: asc))
+
+    check(len(s) == 2)
+    check(s[0].a == 7)
+    check(s[0].b == "x")
+    check(s[1].a == 17)
+    check(s[1].b == "yz")
+
+    tx.commit
+    dc.closeContext
