@@ -18,7 +18,7 @@ type
   RDB_expression* = ptr object
 
   RDB_object* = object
-    data: array[36, char]
+    data: array[12 * sizeof(pointer), char]
 
   RDB_seq_item* = object
     attrname*: cstring
@@ -28,7 +28,8 @@ type
     name*: cstring
     exp*: RDB_expression
 
-  RDB_exec_contextObj* = array[60, char]
+  RDB_exec_contextObj* =
+      array[20 * sizeof(pointer), char]
   
   RDB_exec_context* = ptr RDB_exec_contextObj
 
