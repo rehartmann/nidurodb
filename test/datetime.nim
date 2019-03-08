@@ -10,14 +10,7 @@ import times
 suite "datetime":
 
   setup:
-    let errC = execCmd("echo \"" &
-                      "create_env('dbenv');" &
-                      "create_db('D');" &
-                      "current_db := 'D';" &
-                      "begin tx;" &
-                      "var td real rel {n int, d datetime} key{n};" &
-                      "commit;\"" &
-                      "| durodt")
+    let errC = execCmd("durodt datetime-setup.td")
     require(errC == 0)
 
   teardown:    
