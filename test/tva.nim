@@ -9,15 +9,7 @@ import os
 suite "tuple-valued attributes":
 
   setup:
-    let errC = execCmd("echo \"" &
-                      "create_env('dbenv');" &
-                      "create_db('D');" &
-                      "current_db := 'D';" &
-                      "begin tx;" &
-                      "var t1 real rel {n int, tp tuple {a int, b string} } key{n};" &
-                      "var t2 real rel {n int, m int, s string, f float} key{n};" &
-                      "commit;\"" &
-                      "| durodt")
+    let errC = execCmd("durodt tva-setup.td")
     require(errC == 0)
 
   teardown:
