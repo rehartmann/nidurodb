@@ -30,7 +30,7 @@ DuroDBMS is based on the principles laid down in the book *Databases, Types, and
 
 ## Getting Started
 
-To use Nidurodb, you need to download and install DuroDBMS ([Github](https://github.com/rehartmann/durodbms)|[Sourceforge](https://sourceforge.net/projects/duro/files/duro/1.5/)).
+To use Nidurodb, you need to download and install DuroDBMS ([Github](https://github.com/rehartmann/durodbms)|[Sourceforge](https://sourceforge.net/projects/duro/files/duro/)).
 
 Add the lib directory to the library path (LD_LIBRARY_PATH on Linux).
 
