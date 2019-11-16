@@ -1153,10 +1153,7 @@ macro `:=`*(dest: untyped, src: Expression): AttrUpdate =
   result = newCall("attributeAssignment", toStrLit(dest), src)
 
 proc insertAssignment*[T](dest: string, src: T): Assignment =
-  result = new Assignment
-  result.kind = akInsert
-  result.insertDest = dest
-  result.insertFlags = 0
+  result = Assignment(kind: akInsert, insertDest: dest, insertFlags: 0)
   RDB_init_obj(addr(result.insertSource))
   try:
     toDuroObj(addr(result.insertSource), src)
@@ -1168,20 +1165,14 @@ macro insert*[T](insDest: untyped, insSrc: T): Assignment =
   result = newCall("insertAssignment", toStrLit(insDest), insSrc)
 
 proc deleteAssignment*(dest: string, cond: Expression): Assignment =
-  result = new Assignment
-  result.kind = akDelete
-  result.deleteDest = dest
-  result.deleteCond = cond
+  result = Assignment(kind: akDelete, deleteDest: dest, deleteCond: cond)
 
 macro delete*(delDest: untyped, delCond: Expression): Assignment =
   result = newCall("deleteAssignment", toStrLit(delDest), delCond)
 
 proc updateAssignment*(tbName: string, cond: Expression,
                  attrUpdates: varargs[AttrUpdate]): Assignment =
-  result = new Assignment
-  result.kind = akUpdate
-  result.updateDest = tbName
-  result.updateCond = cond
+  result = Assignment(kind: akUpdate, updateDest: tbName, updateCond: cond)
 
   result.attrUpdates = newSeq[AttrUpdate](attrUpdates.len)
   for i in 0..<result.attrUpdates.len:
@@ -1195,10 +1186,7 @@ macro update*(dest: untyped, cond: Expression,
   result = newCall("updateAssignment", updateAssignmentArgs)
 
 proc vDeleteAssignment*[T](dest: string, src: T): Assignment =
-  result = new Assignment
-  result.kind = akVDelete
-  result.vDeleteDest = dest
-  result.vDeleteFlags = 0
+  result = Assignment(kind: akVDelete, vDeleteDest: dest, vDeleteFlags: 0)
   RDB_init_obj(addr(result.vDeleteSource))
   try:
     toDuroObj(addr(result.vDeleteSource), src)
