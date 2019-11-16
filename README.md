@@ -34,7 +34,7 @@ To use Nidurodb, you need to download and install DuroDBMS ([Github](https://git
 
 Add the lib directory to the library path (LD_LIBRARY_PATH on Linux).
 
-To create databases and tables and to run the tests you will also the the interpreter [Duro D/T](http://duro.sourceforge.net/docs/durodt/tut.html).
+To create databases and tables and to run the tests you will also need the interpreter [Duro D/T](http://duro.sourceforge.net/docs/durodt/tut.html).
 To make the interpreter available on the command line, add the bin directory to the search path.
 
 Nidurodb has been tested with Nim 1.0.2. It may not work with versions of Nim earlier than 1.0.
