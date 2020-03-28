@@ -1063,8 +1063,6 @@ macro insert*(dest: untyped, src: untyped, tx: Transaction): typed =
   result = newCall("insertS", toStrLit(dest), src, tx)
 
 proc deleteS*(tbName: string, cond: Expression, tx: Transaction): int {.discardable.} =
-  ## Deletes the tuples for which 'cond' evaluates to true from the table
-  ## given by 'v'.
   let tb = RDB_get_table(cstring(tbname),
                          addr(tx.database.context.execContext),
                          addr(tx.tx))
@@ -1077,6 +1075,8 @@ proc deleteS*(tbName: string, cond: Expression, tx: Transaction): int {.discarda
     raiseDuroError(tx)
 
 macro delete*(dest: untyped, cond:Expression, tx: Transaction): int {.discardable.} =
+  ## Deletes the tuples for which 'cond' evaluates to true from the table
+  ## given by dest.
   result = newCall("deleteS", toStrLit(dest), cond, tx)
 
 proc updateS*(tbName: string, cond: Expression, tx: Transaction,
@@ -1113,7 +1113,7 @@ proc updateS*(tbName: string, cond: Expression, tx: Transaction,
 
 macro update*(dest: untyped, cond: Expression, tx: Transaction,
               assigns: varargs[untyped]): int {.discardable.} =
-  ## Updates the table given by 'v'.
+  ## Updates the table given by dest.
   ## Example: duro.update(t1, V(n) $= 1, tx, s := toExpr("NewValue"))
   var opargs: seq[NimNode] = newSeq[NimNode](2 * len(assigns) + 3);
   opargs[0] = toStrLit(dest)
